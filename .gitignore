@@ -1,1 +1,11 @@
+# Runtime secrets
 cibs.env
+.env
+.env.*
+*.env
+secrets/
+
+# Runtime data / caches
+data/
+__pycache__/
+*.pyc
