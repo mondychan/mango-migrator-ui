@@ -1,0 +1,16 @@
+services:
+  mango-migrator-ui:
+    build: .
+    container_name: mango-migrator-ui
+    ports:
+      - "8099:8099"
+    restart: unless-stopped
+    volumes:
+      - mango_migrator_data:/app/data
+      - ./cibs.env:/app/cibs.env:ro
+    environment:
+      - MANGO_SECRETS_ENV=/app/cibs.env
+
+volumes:
+  mango_migrator_data:
+    name: mango_migrator_data
