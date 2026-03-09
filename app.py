@@ -807,6 +807,15 @@ def _run_job(source_spec: dict):
             STATE.current["finished_at"] = datetime.now(UTC).isoformat()
             STATE.current["percent"] = 100
             STATE.current["stage"] = "done"
+        _append_log(
+            "Summary: "
+            f"deactivated={report['deactivated_count']} "
+            f"deact_skipped={report['deactivate_skipped_count']} "
+            f"deact_errors={report['deactivate_errors_count']} "
+            f"created={report['created_count']} "
+            f"import_skipped={report['import_skipped_count']} "
+            f"import_errors={report['import_errors_count']}"
+        )
         _append_log(f"Done. Report: {report_path}")
 
     except Exception as exc:
