@@ -624,6 +624,7 @@ def _run_job(source_spec: dict):
             }
         _append_log(f"Active Mango users loaded: {len(active_users)}")
 
+        known_existing_logins = set(active_users.keys())
         total_steps = max(1, len(deact_rows) + len(import_rows))
         done = 0
         has_deactivation = bool(deact_rows)
@@ -694,6 +695,8 @@ def _run_job(source_spec: dict):
             source_id = row.get("source_id", "")
             if not login:
                 report["import_skipped"].append({"reason": "no_login", "source_id": source_id, "name": row.get("name", "")})
+            elif login in known_existing_logins:
+                report["import_skipped"].append({"reason": "already_exists", "main_login": login, "source_id": source_id})
             else:
                 _, chk = _soap_call(
                     url,
@@ -703,6 +706,7 @@ def _run_job(source_spec: dict):
                 )
                 exists = bool(re.search(fr"<login[^>]*>{re.escape(login)}</login>", chk))
                 if exists:
+                    known_existing_logins.add(login)
                     report["import_skipped"].append({"reason": "already_exists", "main_login": login, "source_id": source_id})
                 else:
                     name = (row.get("name") or "").strip()
@@ -760,6 +764,7 @@ def _run_job(source_spec: dict):
                             }
                         )
                     else:
+                        known_existing_logins.add(login)
                         report["created"].append(
                             {"main_login": login, "source_id": source_id, "mango_user_id": result}
                         )
