@@ -7,7 +7,8 @@
   <style>
     @import url("https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
     :root{--bg:#121252;--panel:rgba(9,15,34,.82);--ink:#ffffff;--muted:#edf2ff;--line:rgba(190,205,245,.34);--accent:#00cfff;--accent-soft:#67e796;--warning:#ceff2d;--danger:#ff7a7a;--btn-ink:#121252;--shadow:0 25px 60px rgba(7,10,24,.45);--gradient:linear-gradient(120deg,#00cfff,#67e796,#ceff2d)}
-    *{box-sizing:border-box} body{margin:0;font-family:"Fira Sans",system-ui,sans-serif;color:var(--ink);background:radial-gradient(circle at 12% 12%,rgba(0,207,255,.25) 0,transparent 45%),radial-gradient(circle at 88% 8%,rgba(103,231,150,.18) 0,transparent 50%),linear-gradient(160deg,#121252 0%,#1f1f6e 45%,#3700a6 100%);min-height:100vh}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:"Fira Sans",system-ui,sans-serif;color:var(--ink);background:radial-gradient(circle at 12% 12%,rgba(0,207,255,.25) 0,transparent 45%),radial-gradient(circle at 88% 8%,rgba(103,231,150,.18) 0,transparent 50%),linear-gradient(160deg,#121252 0%,#1f1f6e 45%,#3700a6 100%);min-height:100vh}
     .app{max-width:1100px;margin:0 auto;padding:24px 16px 40px}
     .hero{border:1px solid var(--line);border-radius:20px;padding:16px 20px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:14px}
     .hero-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -15,47 +16,48 @@
     .hero-mark{width:62px;height:62px;border-radius:16px;display:grid;place-items:center;background:rgba(55,0,166,.2);border:1px solid rgba(255,255,255,.2)}
     .hero-mark img{width:38px;height:38px;display:block}
     .hero-kicker{margin:0;text-transform:uppercase;letter-spacing:.18em;font-size:12px;color:var(--warning)}
-    h1{margin:4px 0 8px;font-size:30px;color:#fff} .subtitle{margin:0;color:#f3f6ff}
+    h1{margin:4px 0 8px;font-size:30px;color:#fff}
+    .subtitle{margin:0;color:#f3f6ff}
     .badge{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;background:rgba(160,183,242,.1)}
-
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
     .card h3{margin:0 0 10px}
     .steps{margin:0;padding-left:20px;display:grid;gap:8px}
     code{font-family:"IBM Plex Mono",monospace;color:#dff4ff;background:rgba(12,18,40,.78);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
-
     .warn,.info,.ok{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px}
     .warn{background:rgba(206,255,45,.14);color:#f1ffd0;border-color:rgba(206,255,45,.45)}
     .info{background:rgba(0,207,255,.14);color:#caf4ff;border-color:rgba(0,207,255,.5)}
     .ok{background:rgba(103,231,150,.14);color:#c9ffe0;border-color:rgba(103,231,150,.5)}
-
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .filebox{flex:1;min-width:260px;border:1px dashed rgba(166,186,230,.45);border-radius:10px;padding:10px;background:rgba(12,18,40,.55)}
+    .row.spread{justify-content:space-between}
+    .filebox,.panel{flex:1;min-width:260px;border:1px dashed rgba(166,186,230,.45);border-radius:10px;padding:10px;background:rgba(12,18,40,.55)}
     label{display:block;font-size:13px;color:#f0f4ff;margin-bottom:6px}
-    input[type=file]{width:100%;color:#edf2ff}
+    input[type=file],select{width:100%;color:#edf2ff}
+    select,input[type=text]{padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(12,18,40,.8);color:#fff}
     button{border:1px solid transparent;border-radius:10px;padding:10px 14px;background:var(--gradient);color:var(--btn-ink);font-weight:700;cursor:pointer}
     button.secondary{background:rgba(160,183,242,.15);border-color:rgba(160,183,242,.4);color:#dfe8ff}
     button.danger{background:linear-gradient(120deg,#ff9f9f,#ff7a7a);color:#421515}
     button:disabled{opacity:.55;cursor:not-allowed}
-
     .collapsed{display:none}
     .stage{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:13px;background:rgba(160,183,242,.1)}
-    .dot{width:8px;height:8px;border-radius:50%;background:#7a89b8}.dot.run{background:var(--accent-soft)}
+    .dot{width:8px;height:8px;border-radius:50%;background:#7a89b8}
+    .dot.run{background:var(--accent-soft)}
     .progress{margin-top:10px;height:14px;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:rgba(12,18,40,.75)}
-    .progress > .bar{height:100%;width:0%;background:var(--gradient);transition:width .35s ease}
-    .progress.running > .bar{background-size:200% 100%;animation:move 1.1s linear infinite}
-    .progress.stopping > .bar{background:linear-gradient(120deg,#ffb0b0,#ff7a7a);animation:none}
+    .progress>.bar{height:100%;width:0%;background:var(--gradient);transition:width .35s ease}
+    .progress.running>.bar{background-size:200% 100%;animation:move 1.1s linear infinite}
+    .progress.stopping>.bar{background:linear-gradient(120deg,#ffb0b0,#ff7a7a);animation:none}
     @keyframes move{from{background-position:0 0}to{background-position:200% 0}}
     .summary{margin-top:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-
+    .chip{background:rgba(12,18,40,.75);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px}
+    .muted{font-size:13px;color:#eef3ff}
+    .mode-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .mode-option{border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(12,18,40,.55)}
+    .mode-option.active{border-color:rgba(0,207,255,.6);box-shadow:inset 0 0 0 1px rgba(0,207,255,.35)}
+    pre{margin:0;max-height:360px;overflow:auto;background:#070b17;border:1px solid #25345f;border-radius:10px;padding:12px;color:#b9f7d4;font-size:12px;font-family:"IBM Plex Mono",monospace;white-space:pre-wrap;word-break:break-word}
     .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:999}
-    .modal-backdrop.collapsed{display:none !important}
+    .modal-backdrop.collapsed{display:none!important}
     .modal{max-width:520px;width:calc(100% - 24px);background:rgba(10,16,36,.97);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
     .modal h4{margin:0 0 8px}
     .modal input{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(12,18,40,.8);color:#fff}
-    .chip{background:rgba(12,18,40,.75);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px}
-
-    pre{margin:0;max-height:360px;overflow:auto;background:#070b17;border:1px solid #25345f;border-radius:10px;padding:12px;color:#b9f7d4;font-size:12px;font-family:"IBM Plex Mono",monospace;white-space:pre-wrap;word-break:break-word}
-    .subtle{font-size:13px;color:#eef3ff}
     @media (max-width:760px){h1{font-size:24px}.hero-brand{align-items:center}}
   </style>
 </head>
@@ -68,7 +70,7 @@
           <div>
             <p class="hero-kicker">fortenet tools</p>
             <h1>Mango Migrator UI</h1>
-            <p class="subtitle">Deaktivace + import klientů z ISPadmin CSV do Mango.</p>
+            <p class="subtitle">Import klientů z ISPAdminu do Mango přes CSV nebo ISPAdmin API.</p>
           </div>
         </div>
         <div class="badge" id="lastRunInfo">Last run: —</div>
@@ -76,30 +78,66 @@
     </header>
 
     <div class="card">
-      <h3>📋 Postup</h3>
+      <h3>Postup</h3>
       <ol class="steps">
-        <li><b>Export <code>kontakty.csv</code> v ISPadmin:</b><br>Klienti → Kontakty → vypsat všechny (bez filtru) → export CSV.<br>Minimálně sloupce: <code>ID</code>, <code>Klientské číslo</code>, <code>Uživatelské jméno</code>, <code>Klient</code>, <code>Stav</code>.</li>
-        <li><b>Export <code>deaktivovani-klienti.csv</code>:</b><br>Klienti → Deaktivovaní klienti → vypsat všechny (bez filtru) → export CSV.<br>Minimálně sloupce: <code>ID</code>, <code>Klientské číslo</code>, <code>Uživatelské jméno</code>.</li>
+        <li>Vyber zdroj dat: původní <code>CSV</code> nebo nový <code>ISPAdmin API</code>.</li>
+        <li>Zdroj nejdřív připrav: u CSV nahraj oba soubory, u API vytvoř snapshot aktivních klientů.</li>
+        <li>Spusť job. Režim API zatím jen přidává klienty, deaktivace zůstává nulová.</li>
       </ol>
-      <div class="warn"><b>⚠️ Důležité:</b> soubory nesmíš prohodit.</div>
-      <div class="info">Aplikace nejdřív deaktivuje klienty podle <code>deaktivovani-klienti.csv</code>, potom doplní nové klienty z <code>kontakty.csv</code>. Volání běží postupně (rate-limit API), aby se nepřetížilo API. Běh trvá cca <b>~20 minut</b>. Během běhu stránku nerefreshuj.</div>
+      <div class="info">Aplikace vždy importuje do Mango postupně, aby zbytečně nepřetěžovala API. Připravený zdroj se po doběhu smaže.</div>
     </div>
 
-    <div class="card" id="step1Card">
-      <h3>1) Upload CSV</h3>
+    <div class="card" id="sourceCard">
+      <h3>1) Zdroj dat</h3>
       <div class="row">
-        <div class="filebox"><label>deaktivovani-klienti.csv</label><input type="file" id="f1" accept=".csv" /></div>
-        <div class="filebox"><label>kontakty.csv</label><input type="file" id="f2" accept=".csv" /></div>
-        <button id="uploadBtn">Nahrát soubory</button>
+        <div style="flex:1;min-width:240px">
+          <label for="sourceMode">Vyber režim</label>
+          <select id="sourceMode">
+            <option value="csv">CSV export</option>
+            <option value="api">ISPAdmin API</option>
+          </select>
+        </div>
+        <div class="panel" style="min-width:320px">
+          <div class="muted" id="preparedSummary">Zatím není připraven žádný zdroj.</div>
+        </div>
       </div>
-      <div id="uploadMsg" class="subtle" style="margin-top:10px"></div>
+
+      <div class="mode-grid" style="margin-top:12px">
+        <div class="mode-option" id="csvOption">
+          <h4 style="margin:0 0 8px">CSV režim</h4>
+          <p class="muted" style="margin:0 0 10px">Použije stávající workflow se soubory <code>deaktivovani-klienti.csv</code> a <code>kontakty.csv</code>.</p>
+          <div class="row">
+            <div class="filebox"><label>deaktivovani-klienti.csv</label><input type="file" id="f1" accept=".csv" /></div>
+            <div class="filebox"><label>kontakty.csv</label><input type="file" id="f2" accept=".csv" /></div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button id="uploadBtn">Nahrát a validovat CSV</button>
+            <span class="muted">CSV režim zachovává i deaktivace.</span>
+          </div>
+          <div id="uploadMsg" class="muted" style="margin-top:10px"></div>
+        </div>
+
+        <div class="mode-option collapsed" id="apiOption">
+          <h4 style="margin:0 0 8px">ISPAdmin API režim</h4>
+          <p class="muted" style="margin:0 0 10px">Backend načte aktivní klienty z ISPAdmin REST API pomocí tokenu a URL nastavených v <code>cibs.env</code>.</p>
+          <div class="warn"><b>Aktuálně:</b> API režim vytváří nové klienty v Mango. Deaktivace z ISPAdminu se zatím neřeší.</div>
+          <div class="row" style="margin-top:10px">
+            <button id="prepareApiBtn">Připravit API snapshot</button>
+            <span class="muted">Vytvoří lokální snapshot aktivních klientů pro aktuální běh.</span>
+          </div>
+          <div id="apiMsg" class="muted" style="margin-top:10px"></div>
+        </div>
+      </div>
     </div>
 
     <div class="card collapsed" id="step2Card">
       <h3>2) Spustit job</h3>
-      <div class="row" style="justify-content:space-between">
-        <div class="row"><button id="runBtn">Start</button><span class="stage"><span id="dot" class="dot"></span><span id="stage">idle</span></span></div>
-        <div class="subtle" id="report"></div>
+      <div class="row spread">
+        <div class="row">
+          <button id="runBtn">Start</button>
+          <span class="stage"><span id="dot" class="dot"></span><span id="stage">idle</span></span>
+        </div>
+        <div class="muted" id="report"></div>
       </div>
       <div class="progress" id="progWrap"><div class="bar" id="progBar"></div></div>
       <div class="summary" id="summary"></div>
@@ -111,8 +149,8 @@
     </div>
 
     <div class="card" id="reportsCard">
-      <div class="row" style="justify-content:space-between;margin-top:2px">
-        <h3 style="margin:0">📦 Historie reportů</h3>
+      <div class="row spread" style="margin-top:2px">
+        <h3 style="margin:0">Historie reportů</h3>
         <div class="row">
           <button class="secondary" id="refreshReportsBtn">Obnovit</button>
           <button class="secondary" id="displayCurrentReportBtn">Zobrazit poslední</button>
@@ -133,8 +171,8 @@
 
   <div id="stopModal" class="modal-backdrop collapsed">
     <div class="modal">
-      <h4>Opravdu chcete operaci zastavit?</h4>
-      <p class="subtle">Pro potvrzení napište do pole přesně <code>STOP</code>.</p>
+      <h4>Opravdu chceš operaci zastavit?</h4>
+      <p class="muted">Pro potvrzení napiš do pole přesně <code>STOP</code>.</p>
       <input id="stopConfirmInput" placeholder="Napiš STOP" />
       <div class="row" style="margin-top:10px;justify-content:flex-end">
         <button class="secondary" id="stopCancelBtn">Zrušit</button>
@@ -144,26 +182,63 @@
   </div>
 
 <script>
-const $ = (id)=>document.getElementById(id);
-let uploadOk = false;
+const $ = (id) => document.getElementById(id);
 let keepaliveTimer = null;
 let lastCompletedRunText = 'Last run: —';
-function statusMsg(el, text, type='info'){ el.className = type==='ok'?'ok':(type==='warn'?'warn':'info'); el.textContent = text; }
+let selectedMode = 'csv';
+let preparedSource = null;
 
-function reportNameFromPath(path){
-  if (!path) return '';
-  const parts = String(path).split('/');
-  return parts[parts.length-1] || '';
+function statusMsg(el, text, type = 'info') {
+  el.className = type === 'ok' ? 'ok' : (type === 'warn' ? 'warn' : 'info');
+  el.textContent = text;
 }
 
-async function loadReports(){
+function reportNameFromPath(path) {
+  if (!path) return '';
+  const parts = String(path).split('/');
+  return parts[parts.length - 1] || '';
+}
+
+function fmtTs(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? ts : d.toLocaleString('cs-CZ', { hour12: false });
+}
+
+function sourceReadyForSelectedMode() {
+  return !!preparedSource && preparedSource.mode === selectedMode;
+}
+
+function updateSourceUi() {
+  $('csvOption').classList.toggle('collapsed', selectedMode !== 'csv');
+  $('apiOption').classList.toggle('collapsed', selectedMode !== 'api');
+  $('csvOption').classList.toggle('active', selectedMode === 'csv');
+  $('apiOption').classList.toggle('active', selectedMode === 'api');
+  $('step2Card').classList.toggle('collapsed', !sourceReadyForSelectedMode() && !$('runBtn').dataset.running);
+
+  if (!preparedSource) {
+    $('preparedSummary').textContent = 'Zatím není připraven žádný zdroj.';
+    return;
+  }
+
+  const summary = preparedSource.summary || {};
+  const suffix = `Připraveno ${fmtTs(preparedSource.prepared_at)} | import: ${summary.import_count ?? 0} | deaktivace: ${summary.deactivate_count ?? 0}`;
+  $('preparedSummary').textContent = `${preparedSource.label}: ${suffix}`;
+}
+
+function applyPreparedSource(source) {
+  preparedSource = source || null;
+  updateSourceUi();
+}
+
+async function loadReports() {
   const r = await fetch('/api/reports');
   const j = await r.json();
   const list = Array.isArray(j.reports) ? j.reports : [];
   const box = $('reportsList');
   box.innerHTML = '';
   if (!list.length) {
-    box.innerHTML = `<div class="subtle">Zatím žádné reporty.</div>`;
+    box.innerHTML = '<div class="muted">Zatím žádné reporty.</div>';
     return;
   }
 
@@ -183,7 +258,7 @@ async function loadReports(){
     row.innerHTML = `
       <div style="min-width:0">
         <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.name}</div>
-        <div class="subtle">${when} • ${kb} KB</div>
+        <div class="muted">${when} • ${kb} KB</div>
       </div>
       <div class="row" style="flex-wrap:nowrap">
         <button class="secondary" data-view="${it.name}">View</button>
@@ -192,12 +267,12 @@ async function loadReports(){
     box.appendChild(row);
   }
 
-  box.querySelectorAll('button[data-view]').forEach(btn => {
+  box.querySelectorAll('button[data-view]').forEach((btn) => {
     btn.onclick = () => showReport(btn.getAttribute('data-view'));
   });
 }
 
-async function showReport(name){
+async function showReport(name) {
   if (!name) return;
   const r = await fetch(`/api/reports/${encodeURIComponent(name)}`);
   const j = await r.json();
@@ -208,41 +283,131 @@ async function showReport(name){
   $('reportViewer').textContent = JSON.stringify(j.data, null, 2);
 }
 
-function startKeepalive(){
+function startKeepalive() {
   if (keepaliveTimer) return;
   keepaliveTimer = setInterval(() => {
-    fetch('/api/keepalive', {method:'POST'}).catch(()=>{});
+    fetch('/api/keepalive', { method: 'POST' }).catch(() => {});
   }, 15000);
 }
 
-function stopKeepalive(){
+function stopKeepalive() {
   if (!keepaliveTimer) return;
   clearInterval(keepaliveTimer);
   keepaliveTimer = null;
 }
 
-$('uploadBtn').onclick = async () => {
-  const f1 = $('f1').files[0], f2 = $('f2').files[0];
-  if (!f1 || !f2) return statusMsg($('uploadMsg'),'Vyber oba CSV soubory.','warn');
-  const fd = new FormData(); fd.append('deactivate_csv', f1); fd.append('import_csv', f2);
+async function prepareCsvSource() {
+  const f1 = $('f1').files[0];
+  const f2 = $('f2').files[0];
+  if (!f1 || !f2) return statusMsg($('uploadMsg'), 'Vyber oba CSV soubory.', 'warn');
+  const fd = new FormData();
+  fd.append('deactivate_csv', f1);
+  fd.append('import_csv', f2);
   try {
-    const r = await fetch('/api/upload', {method:'POST', body:fd}); const j = await r.json();
-    if (!r.ok) { uploadOk=false; statusMsg($('uploadMsg'),'Chyba uploadu: '+(j.detail||JSON.stringify(j)),'warn'); $('step2Card').classList.add('collapsed'); return; }
-    uploadOk=true; statusMsg($('uploadMsg'),'Upload + validace proběhly v pořádku. Můžeš spustit job.','ok'); $('step2Card').classList.remove('collapsed');
-  } catch(e){ uploadOk=false; statusMsg($('uploadMsg'),'Chyba spojení: '+e.message,'warn'); }
-};
+    const r = await fetch('/api/upload', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (!r.ok) {
+      applyPreparedSource(null);
+      statusMsg($('uploadMsg'), 'Chyba uploadu: ' + (j.detail || JSON.stringify(j)), 'warn');
+      return;
+    }
+    applyPreparedSource(j.source || null);
+    statusMsg($('uploadMsg'), 'CSV zdroj je připravený. Můžeš spustit job.', 'ok');
+  } catch (e) {
+    applyPreparedSource(null);
+    statusMsg($('uploadMsg'), 'Chyba spojení: ' + e.message, 'warn');
+  }
+}
 
-async function startJob(){
-  if (!uploadOk) return alert('Nejdřív nahraj a validuj oba CSV soubory.');
-  const r = await fetch('/api/start',{method:'POST'}); const j = await r.json();
-  if(!r.ok) return alert(j.detail||'Start failed');
+async function prepareApiSource() {
+  try {
+    const r = await fetch('/api/prepare-api-source', { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) {
+      applyPreparedSource(null);
+      statusMsg($('apiMsg'), 'Chyba přípravy API: ' + (j.detail || JSON.stringify(j)), 'warn');
+      return;
+    }
+    applyPreparedSource(j.source || null);
+    statusMsg($('apiMsg'), 'ISPAdmin API snapshot je připravený. Můžeš spustit job.', 'ok');
+  } catch (e) {
+    applyPreparedSource(null);
+    statusMsg($('apiMsg'), 'Chyba spojení: ' + e.message, 'warn');
+  }
+}
+
+async function startJob() {
+  if (!sourceReadyForSelectedMode()) {
+    alert(selectedMode === 'csv' ? 'Nejdřív nahraj a validuj oba CSV soubory.' : 'Nejdřív připrav ISPAdmin API snapshot.');
+    return;
+  }
+  const r = await fetch('/api/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source_mode: selectedMode }),
+  });
+  const j = await r.json();
+  if (!r.ok) return alert(j.detail || 'Start failed');
   $('logCard').classList.remove('collapsed');
 }
 
-async function stopJob(){
-  const r = await fetch('/api/stop?confirm=STOP',{method:'POST'}); const j = await r.json();
-  if(!r.ok) return alert(j.detail||'Stop failed');
+async function stopJob() {
+  const r = await fetch('/api/stop?confirm=STOP', { method: 'POST' });
+  const j = await r.json();
+  if (!r.ok) return alert(j.detail || 'Stop failed');
 }
+
+function summaryHtml(s) {
+  if (!s.summary) return '';
+  const x = s.summary;
+  const sourceText = x.source_mode === 'api' ? 'ISPAdmin API' : (x.source_mode === 'csv' ? 'CSV' : '—');
+  return `
+    <div class="chip"><b>Zdroj</b><br>${sourceText}</div>
+    <div class="chip"><b>Deaktivováno</b><br>${x.deactivated_count ?? 0}</div>
+    <div class="chip"><b>Přeskočeno (deact)</b><br>${x.deactivate_skipped_count ?? 0}</div>
+    <div class="chip"><b>Chyby (deact)</b><br>${x.deactivate_errors_count ?? 0}</div>
+    <div class="chip"><b>Vytvořeno</b><br>${x.created_count ?? 0}</div>
+    <div class="chip"><b>Přeskočeno (import)</b><br>${x.import_skipped_count ?? 0}</div>
+    <div class="chip"><b>Chyby (import)</b><br>${x.import_errors_count ?? 0}</div>`;
+}
+
+function render(s) {
+  const running = !!s.running;
+  const cancelReq = !!s.cancel_requested;
+  if (!running) applyPreparedSource(s.prepared_source || preparedSource);
+
+  $('stage').textContent = `${s.stage || 'idle'} (${s.percent || 0}%)` + (cancelReq ? ' • stopping...' : '');
+  $('progBar').style.width = `${s.percent || 0}%`;
+  $('progWrap').classList.toggle('running', running && !cancelReq);
+  $('progWrap').classList.toggle('stopping', cancelReq);
+  $('dot').className = 'dot ' + (running ? 'run' : '');
+  $('log').textContent = (s.log || []).join('\n');
+  if ((s.log || []).length) $('logCard').classList.remove('collapsed');
+  $('lastRunInfo').textContent = running ? `${lastCompletedRunText} • running` : lastCompletedRunText;
+  window.__lastReportPath = s.report_path || '';
+  $('report').innerHTML = s.report_path ? `Report: <code>${s.report_path}</code>` : '';
+  $('summary').innerHTML = summaryHtml(s);
+  if (s.report_path) loadReports().catch(() => {});
+  if (running || s.error || s.summary || s.report_path || sourceReadyForSelectedMode()) $('step2Card').classList.remove('collapsed');
+
+  if (running) startKeepalive(); else stopKeepalive();
+
+  $('sourceMode').disabled = running;
+  $('uploadBtn').disabled = running;
+  $('prepareApiBtn').disabled = running;
+  $('runBtn').dataset.running = running ? '1' : '';
+  $('runBtn').textContent = cancelReq ? 'Stopping...' : (running ? 'Stop' : 'Start');
+  $('runBtn').classList.toggle('danger', running);
+  $('runBtn').disabled = cancelReq;
+}
+
+$('sourceMode').onchange = (e) => {
+  selectedMode = e.target.value;
+  updateSourceUi();
+};
+
+$('uploadBtn').onclick = () => prepareCsvSource();
+$('prepareApiBtn').onclick = () => prepareApiSource();
 
 $('runBtn').onclick = async () => {
   const running = $('runBtn').dataset.running === '1';
@@ -253,7 +418,9 @@ $('runBtn').onclick = async () => {
 };
 
 $('stopCancelBtn').onclick = () => $('stopModal').classList.add('collapsed');
-$('stopConfirmInput').oninput = (e) => { $('stopConfirmBtn').disabled = String(e.target.value).trim().toUpperCase() !== 'STOP'; };
+$('stopConfirmInput').oninput = (e) => {
+  $('stopConfirmBtn').disabled = String(e.target.value).trim().toUpperCase() !== 'STOP';
+};
 $('stopConfirmBtn').onclick = async () => {
   await stopJob();
   $('stopModal').classList.add('collapsed');
@@ -266,45 +433,25 @@ $('displayCurrentReportBtn').onclick = async () => {
   await showReport(name);
 };
 
-function summaryHtml(s){ if(!s.summary) return ''; const x=s.summary; return `
-  <div class='chip'><b>Deaktivováno</b><br>${x.deactivated_count ?? 0}</div>
-  <div class='chip'><b>Přeskočeno (deact)</b><br>${x.deactivate_skipped_count ?? 0}</div>
-  <div class='chip'><b>Chyby (deact)</b><br>${x.deactivate_errors_count ?? 0}</div>
-  <div class='chip'><b>Vytvořeno</b><br>${x.created_count ?? 0}</div>
-  <div class='chip'><b>Přeskočeno (import)</b><br>${x.import_skipped_count ?? 0}</div>
-  <div class='chip'><b>Chyby (import)</b><br>${x.import_errors_count ?? 0}</div>`; }
-function fmtTs(ts){ if(!ts) return '—'; const d=new Date(ts); return isNaN(d.getTime()) ? ts : d.toLocaleString('cs-CZ',{hour12:false}); }
+const es = new EventSource('/api/events');
+es.onmessage = (e) => {
+  try { render(JSON.parse(e.data)); } catch {}
+};
 
-function render(s){
-  const running = !!s.running;
-  const cancelReq = !!s.cancel_requested;
-  $('stage').textContent = `${s.stage || 'idle'} (${s.percent || 0}%)` + (cancelReq ? ' • stopping…' : '');
-  $('progBar').style.width = `${s.percent || 0}%`;
-  $('progWrap').classList.toggle('running', running && !cancelReq);
-  $('progWrap').classList.toggle('stopping', cancelReq);
-  $('dot').className = 'dot ' + (running ? 'run' : '');
-  $('log').textContent = (s.log || []).join('\n');
-  if ((s.log || []).length) $('logCard').classList.remove('collapsed');
-  // Last run se bere z posledního dokončeného reportu (viz loadReports).
-  $('lastRunInfo').textContent = running ? `${lastCompletedRunText} • running` : lastCompletedRunText;
-  window.__lastReportPath = s.report_path || '';
-  $('report').innerHTML = s.report_path ? `Report: <code>${s.report_path}</code>` : '';
-  $('summary').innerHTML = summaryHtml(s);
-  if (s.report_path) loadReports().catch(()=>{});
-  if (running || s.error || s.summary || s.report_path) $('step2Card').classList.remove('collapsed');
+fetch('/api/status')
+  .then((r) => r.json())
+  .then((s) => {
+    selectedMode = s.prepared_source?.mode || selectedMode;
+    $('sourceMode').value = selectedMode;
+    applyPreparedSource(s.prepared_source || null);
+    if ((s.log || []).length || s.running || s.summary || s.report_path) {
+      $('step2Card').classList.remove('collapsed');
+      $('logCard').classList.remove('collapsed');
+    }
+    render(s);
+  });
 
-  if (running) startKeepalive(); else stopKeepalive();
-
-  $('runBtn').dataset.running = running ? '1' : '0';
-  $('runBtn').textContent = cancelReq ? 'Stopping…' : (running ? 'Stop' : 'Start');
-  $('runBtn').classList.toggle('danger', running);
-  $('runBtn').classList.toggle('secondary', false);
-  $('runBtn').disabled = cancelReq;
-}
-
-const es = new EventSource('/api/events'); es.onmessage = (e)=>{ try { render(JSON.parse(e.data)); } catch {} };
-fetch('/api/status').then(r=>r.json()).then((s)=>{ if((s.log||[]).length||s.running||s.summary||s.report_path){ $('step2Card').classList.remove('collapsed'); $('logCard').classList.remove('collapsed'); } render(s); });
-loadReports().catch(()=>{});
+loadReports().catch(() => {});
 
 window.addEventListener('beforeunload', () => {
   const running = $('runBtn').dataset.running === '1';
