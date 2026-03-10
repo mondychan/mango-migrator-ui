@@ -187,7 +187,7 @@ let keepaliveTimer = null;
 let lastCompletedRunText = 'Last run: —';
 let selectedMode = 'csv';
 let preparedSource = null;
-let hydrateFreshView = true;
+let suppressCompletedHydration = true;
 
 function statusMsg(el, text, type = 'info') {
   el.className = type === 'ok' ? 'ok' : (type === 'warn' ? 'warn' : 'info');
@@ -211,12 +211,11 @@ function sourceReadyForSelectedMode() {
 }
 
 function sanitizeHydratedStatus(s) {
-  if (!hydrateFreshView) return s;
   if (s.running) {
-    hydrateFreshView = false;
+    suppressCompletedHydration = false;
     return s;
   }
-  hydrateFreshView = false;
+  if (!suppressCompletedHydration) return s;
   return {
     ...s,
     stage: 'idle',
@@ -250,6 +249,7 @@ function updateSourceUi() {
 
 function applyPreparedSource(source) {
   preparedSource = source || null;
+  if (preparedSource) suppressCompletedHydration = false;
   updateSourceUi();
 }
 
