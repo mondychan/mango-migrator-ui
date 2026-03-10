@@ -113,7 +113,7 @@ threading.Thread(target=_keepalive_watchdog, daemon=True).start()
 
 
 def _append_log(msg: str):
-    ts = datetime.now(UTC).strftime("%H:%M:%S")
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with STATE.lock:
         STATE.current["log"].append(f"[{ts}] {msg}")
         STATE.current["log"] = STATE.current["log"][-1200:]
