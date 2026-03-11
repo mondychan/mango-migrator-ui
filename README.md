@@ -8,9 +8,9 @@ Podporované režimy:
    - původní workflow se soubory `deaktivovani-klienti.csv` a `kontakty.csv`
    - zachovává deaktivace i import nových klientů
 2. `ISPAdmin API`
-   - načte aktivní klienty z ISPAdmin REST API
-   - aktuálně řeší jen import nových klientů do Mango
-   - deaktivace se v tomto režimu zatím neprovádí
+   - načte aktivní i deaktivované klienty z ISPAdmin REST API
+   - deaktivace řídí přes `GET /clients?active=0`
+   - import nových klientů řídí přes `GET /clients?active=1`
 
 ## Co aplikace dělá
 
@@ -20,7 +20,7 @@ Po přípravě zdroje dat spustí background job, který:
 2. načte export aktivních uživatelů z Mango
 3. podle zvoleného zdroje:
    - `CSV`: provede deaktivace a potom import
-   - `ISPAdmin API`: přeskočí deaktivace a provede import
+   - `ISPAdmin API`: načte snapshot `active=0` a `active=1`, lokálně porovná s Mango a zapíše jen změny
 4. uloží JSON report do `data/reports`
 
 Připravený zdroj dat se po doběhu smaže z `data/uploads`.
@@ -91,5 +91,5 @@ UI poběží na `http://localhost:8099`.
 
 - běží vždy jen jeden job
 - stop je safe-stop, ne hard kill
-- v API režimu se import páruje do Mango přes `clientNumber` z ISPAdminu
+- v API režimu se import i deaktivace párují do Mango přes `clientNumber` z ISPAdminu
 - pokud klient v ISPAdmin API nemá `clientNumber`, záznam se přeskočí

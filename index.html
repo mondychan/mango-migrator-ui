@@ -81,8 +81,8 @@
       <h3>Postup</h3>
       <ol class="steps">
         <li>Vyber zdroj dat: původní <code>CSV</code> nebo nový <code>ISPAdmin API</code>.</li>
-        <li>Zdroj nejdřív připrav: u CSV nahraj oba soubory, u API vytvoř snapshot aktivních klientů.</li>
-        <li>Spusť job. Režim API zatím jen přidává klienty, deaktivace zůstává nulová.</li>
+        <li>Zdroj nejdřív připrav: u CSV nahraj oba soubory, u API vytvoř snapshot aktivních i deaktivovaných klientů.</li>
+        <li>Spusť job. Sync nejdřív deaktivuje klienty z <code>active=0</code>, potom doplní klienty z <code>active=1</code>, kteří v Mango ještě nejsou.</li>
       </ol>
       <div class="info">Aplikace vždy importuje do Mango postupně, aby zbytečně nepřetěžovala API. Připravený zdroj se po doběhu smaže.</div>
     </div>
@@ -119,11 +119,11 @@
 
         <div class="mode-option collapsed" id="apiOption">
           <h4 style="margin:0 0 8px">ISPAdmin API režim</h4>
-          <p class="muted" style="margin:0 0 10px">Backend načte aktivní klienty z ISPAdmin REST API pomocí tokenu a URL nastavených v <code>cibs.env</code>.</p>
-          <div class="warn"><b>Aktuálně:</b> API režim vytváří nové klienty v Mango. Deaktivace z ISPAdminu se zatím neřeší.</div>
+          <p class="muted" style="margin:0 0 10px">Backend načte aktivní i deaktivované klienty z ISPAdmin REST API pomocí tokenu a URL nastavených v <code>cibs.env</code>.</p>
+          <div class="info"><b>API sync:</b> nejdřív porovná Mango s klienty <code>active=0</code> a provede deaktivace, potom z klientů <code>active=1</code> doplní jen chybějící záznamy.</div>
           <div class="row" style="margin-top:10px">
             <button id="prepareApiBtn">Připravit API snapshot</button>
-            <span class="muted">Vytvoří lokální snapshot aktivních klientů pro aktuální běh.</span>
+            <span class="muted">Vytvoří lokální snapshot aktivních i deaktivovaných klientů pro aktuální běh.</span>
           </div>
           <div id="apiMsg" class="muted" style="margin-top:10px"></div>
         </div>

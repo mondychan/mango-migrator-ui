@@ -23,6 +23,7 @@ SECRETS_ENV = Path(os.environ.get("MANGO_SECRETS_ENV", "/app/cibs.env"))
 PREPARED_SOURCE_FILE = UPLOAD_DIR / "source.json"
 CSV_DEACT_FILE = UPLOAD_DIR / "deaktivovani-klienti.csv"
 CSV_IMPORT_FILE = UPLOAD_DIR / "kontakty.csv"
+API_DEACT_FILE = UPLOAD_DIR / "ispadmin-inactive-clients.json"
 API_IMPORT_FILE = UPLOAD_DIR / "ispadmin-active-clients.json"
 
 for p in (UPLOAD_DIR, REPORTS_DIR):
@@ -292,8 +293,9 @@ def _load_prepared_source() -> dict | None:
         if not import_path.exists() or not deact_path.exists():
             return None
     elif mode == "api":
+        deact_path = Path(spec.get("deactivate_path", ""))
         import_path = Path(spec.get("import_path", ""))
-        if not import_path.exists():
+        if not import_path.exists() or not deact_path.exists():
             return None
     else:
         return None
@@ -434,10 +436,10 @@ def _ispadmin_status_map(config: dict) -> dict[int, str]:
     return out
 
 
-def _normalize_ispadmin_import_rows(env: dict) -> list[dict]:
+def _normalize_ispadmin_client_rows(env: dict, active: int) -> list[dict]:
     config = _ispadmin_config(env)
     statuses = _ispadmin_status_map(config)
-    payload = _ispadmin_request(config, "/clients", params={"active": 1})
+    payload = _ispadmin_request(config, "/clients", params={"active": active})
     if not isinstance(payload, dict):
         raise RuntimeError("Unexpected ISPAdmin response for /clients.")
 
@@ -477,6 +479,22 @@ def _normalize_ispadmin_import_rows(env: dict) -> list[dict]:
     return rows
 
 
+def _normalize_ispadmin_deactivation_rows(env: dict) -> list[dict]:
+    rows = []
+    for item in _normalize_ispadmin_client_rows(env, active=0):
+        rows.append(
+            {
+                "source_id": item.get("source_id", ""),
+                "login": (item.get("login") or "").strip(),
+            }
+        )
+    return rows
+
+
+def _normalize_ispadmin_import_rows(env: dict) -> list[dict]:
+    return _normalize_ispadmin_client_rows(env, active=1)
+
+
 def _prepare_csv_source() -> dict:
     _validate_uploaded_csv(CSV_DEACT_FILE, CSV_DEACT_REQUIRED, "deaktivovani-klienti.csv")
     _validate_uploaded_csv(CSV_IMPORT_FILE, CSV_IMPORT_REQUIRED, "kontakty.csv")
@@ -497,17 +515,19 @@ def _prepare_csv_source() -> dict:
 
 def _prepare_api_source() -> dict:
     env = _load_env(SECRETS_ENV)
-    rows = _normalize_ispadmin_import_rows(env)
-    _write_json(API_IMPORT_FILE, rows)
+    deact_rows = _normalize_ispadmin_deactivation_rows(env)
+    import_rows = _normalize_ispadmin_import_rows(env)
+    _write_json(API_DEACT_FILE, deact_rows)
+    _write_json(API_IMPORT_FILE, import_rows)
     spec = {
         "mode": "api",
         "label": "ISPAdmin API",
         "prepared_at": datetime.now(UTC).isoformat(),
-        "deactivate_path": None,
+        "deactivate_path": str(API_DEACT_FILE),
         "import_path": str(API_IMPORT_FILE),
         "summary": {
-            "deactivate_count": 0,
-            "import_count": len(rows),
+            "deactivate_count": len(deact_rows),
+            "import_count": len(import_rows),
         },
     }
     _save_prepared_source(spec)
@@ -521,11 +541,13 @@ def _load_source_rows(spec: dict) -> tuple[list[dict], list[dict]]:
         import_path = Path(spec["import_path"])
         return _normalize_csv_deactivation_rows(deact_path), _normalize_csv_import_rows(import_path)
     if mode == "api":
+        deact_path = Path(spec.get("deactivate_path", ""))
         import_path = Path(spec["import_path"])
-        rows = _load_json(import_path)
-        if not isinstance(rows, list):
+        deact_rows = _load_json(deact_path) if deact_path.exists() else []
+        import_rows = _load_json(import_path)
+        if not isinstance(deact_rows, list) or not isinstance(import_rows, list):
             raise RuntimeError("Prepared ISPAdmin snapshot is invalid.")
-        return [], rows
+        return deact_rows, import_rows
     raise RuntimeError(f"Unsupported source mode: {mode}")
 
 
