@@ -191,6 +191,7 @@ def _telegram_send_message(config: dict, text: str):
     payload = {
         "chat_id": config["chat_id"],
         "text": text,
+        "parse_mode": "HTML",
         "disable_web_page_preview": config["disable_preview"],
     }
     if "message_thread_id" in config:
@@ -247,24 +248,39 @@ def _build_telegram_message(report: dict) -> str:
     started = started_at.astimezone().strftime("%Y-%m-%d %H:%M:%S") if started_at else "-"
     finished = finished_at.astimezone().strftime("%Y-%m-%d %H:%M:%S") if finished_at else "-"
     source_summary = report.get("source_summary") or {}
+    stats = [
+        ("Source active=1", source_summary.get("import_count", 0)),
+        ("Source active=0", source_summary.get("deactivate_count", 0)),
+        ("Deaktivovano", report.get("deactivated_count", 0)),
+        ("Preskoceno deaktivace", report.get("deactivate_skipped_count", 0)),
+        ("Chyby deaktivace", report.get("deactivate_errors_count", 0)),
+        ("Vytvoreno", report.get("created_count", 0)),
+        ("Preskoceno import", report.get("import_skipped_count", 0)),
+        ("Chyby import", report.get("import_errors_count", 0)),
+    ]
+    width = max(len(label) for label, _ in stats)
+    stats_block = "\n".join(
+        f"{html.escape(label.ljust(width))}  {value}" for label, value in stats
+    )
     lines = [
-        "ISPAdmin -> Mango sync",
-        f"Status: {_notification_status_label(report.get('status', 'done'))}",
-        f"Run type: {report.get('run_reason', 'manual')}",
-        f"Started: {started}",
-        f"Finished: {finished}",
-        f"Duration: {_format_duration(report.get('duration_seconds'))}",
-        f"Source active=1: {source_summary.get('import_count', 0)}",
-        f"Source active=0: {source_summary.get('deactivate_count', 0)}",
-        f"Deaktivovano: {report.get('deactivated_count', 0)}",
-        f"Preskoceno (deaktivace): {report.get('deactivate_skipped_count', 0)}",
-        f"Chyby (deaktivace): {report.get('deactivate_errors_count', 0)}",
-        f"Vytvoreno: {report.get('created_count', 0)}",
-        f"Preskoceno (import): {report.get('import_skipped_count', 0)}",
-        f"Chyby (import): {report.get('import_errors_count', 0)}",
+        "<b>ISPAdmin -&gt; Mango sync</b>",
+        "",
+        f"<b>Status:</b> {html.escape(_notification_status_label(report.get('status', 'done')))}",
+        f"<b>Run type:</b> {html.escape(str(report.get('run_reason', 'manual')))}",
+        f"<b>Started:</b> <code>{html.escape(started)}</code>",
+        f"<b>Finished:</b> <code>{html.escape(finished)}</code>",
+        f"<b>Duration:</b> <code>{html.escape(_format_duration(report.get('duration_seconds')))}</code>",
+        "",
+        "<b>Stats</b>",
+        f"<pre>{stats_block}</pre>",
     ]
     if report.get("error"):
-        lines.append(f"Error: {report['error']}")
+        lines.extend(
+            [
+                "",
+                f"<b>Error:</b> <code>{html.escape(str(report['error']))}</code>",
+            ]
+        )
     return "\n".join(lines)
 
 
