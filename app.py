@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import csv
 import html
 import json
 import os
@@ -12,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 import requests
-from fastapi import Body, FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -21,8 +20,6 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 REPORTS_DIR = DATA_DIR / "reports"
 SECRETS_ENV = Path(os.environ.get("MANGO_SECRETS_ENV", "/app/cibs.env"))
 PREPARED_SOURCE_FILE = UPLOAD_DIR / "source.json"
-CSV_DEACT_FILE = UPLOAD_DIR / "deaktivovani-klienti.csv"
-CSV_IMPORT_FILE = UPLOAD_DIR / "kontakty.csv"
 API_DEACT_FILE = UPLOAD_DIR / "ispadmin-inactive-clients.json"
 API_IMPORT_FILE = UPLOAD_DIR / "ispadmin-active-clients.json"
 
@@ -30,41 +27,6 @@ for p in (UPLOAD_DIR, REPORTS_DIR):
     p.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Mango Migrator UI")
-
-CSV_HEADER_ALIASES = {
-    "id": ["ID"],
-    "client_number": ["Klientské číslo", "KlientskÃ© ÄŤÃ­slo"],
-    "username": ["Uživatelské jméno", "UĹľivatelskĂ© jmĂ©no"],
-    "client_name": ["Klient"],
-    "status": ["Stav"],
-    "street": ["Ulice"],
-    "house": ["Byt"],
-    "city": ["Město", "MÄ›sto"],
-    "zip": ["PSČ", "PSÄŚ"],
-    "ico": ["IČO", "IÄŚO"],
-    "dic": ["DIČ", "DIÄŚ"],
-    "email": ["Email"],
-    "billing_email": ["Fakturační email", "FakturaÄŤnĂ­ email"],
-    "technical_email": ["Technický email", "TechnickĂ˝ email"],
-    "business_email": ["Obchodní email", "ObchodnĂ­ email"],
-    "mobile": ["Mobil"],
-    "phone": ["Telefon"],
-    "fax": ["Fax"],
-}
-
-CSV_DEACT_REQUIRED = [
-    ("ID", CSV_HEADER_ALIASES["id"]),
-    ("Klientské číslo", CSV_HEADER_ALIASES["client_number"]),
-    ("Uživatelské jméno", CSV_HEADER_ALIASES["username"]),
-]
-
-CSV_IMPORT_REQUIRED = [
-    ("ID", CSV_HEADER_ALIASES["id"]),
-    ("Klientské číslo", CSV_HEADER_ALIASES["client_number"]),
-    ("Uživatelské jméno", CSV_HEADER_ALIASES["username"]),
-    ("Klient", CSV_HEADER_ALIASES["client_name"]),
-    ("Stav", CSV_HEADER_ALIASES["status"]),
-]
 
 
 class JobState:
@@ -237,13 +199,6 @@ def _sanitize_email(value: str) -> str:
     return ""
 
 
-def _pick_first(row: dict, aliases: list[str]) -> str:
-    for key in aliases:
-        if key in row:
-            return row.get(key, "")
-    return ""
-
-
 def _first_email(client: dict) -> str:
     for key in ("email", "billing_email", "technical_email", "business_email"):
         raw = (client.get(key) or "").strip().lower()
@@ -286,18 +241,11 @@ def _load_prepared_source() -> dict | None:
     except Exception:
         return None
 
-    mode = spec.get("mode")
-    if mode == "csv":
-        import_path = Path(spec.get("import_path", ""))
-        deact_path = Path(spec.get("deactivate_path", ""))
-        if not import_path.exists() or not deact_path.exists():
-            return None
-    elif mode == "api":
-        deact_path = Path(spec.get("deactivate_path", ""))
-        import_path = Path(spec.get("import_path", ""))
-        if not import_path.exists() or not deact_path.exists():
-            return None
-    else:
+    if spec.get("mode") != "api":
+        return None
+    deact_path = Path(spec.get("deactivate_path", ""))
+    import_path = Path(spec.get("import_path", ""))
+    if not import_path.exists() or not deact_path.exists():
         return None
     return spec
 
@@ -312,71 +260,6 @@ def _source_status() -> dict | None:
         "prepared_at": spec.get("prepared_at"),
         "summary": spec.get("summary") or {},
     }
-
-
-def _read_csv_headers(path: Path):
-    with path.open("r", encoding="utf-8-sig", errors="replace", newline="") as file_obj:
-        reader = csv.DictReader(file_obj, delimiter=";")
-        return reader.fieldnames or []
-
-
-def _validate_uploaded_csv(path: Path, required_columns: list[tuple[str, list[str]]], label: str):
-    headers = _read_csv_headers(path)
-    missing = [display for display, aliases in required_columns if not any(alias in headers for alias in aliases)]
-    if missing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"{label}: neplatny CSV format (chybi sloupce: {', '.join(missing)}).",
-        )
-
-
-def _normalize_csv_deactivation_rows(path: Path) -> list[dict]:
-    rows = []
-    with path.open("r", encoding="utf-8-sig", errors="replace", newline="") as file_obj:
-        for row in csv.DictReader(file_obj, delimiter=";"):
-            rows.append(
-                {
-                    "source_id": (_pick_first(row, CSV_HEADER_ALIASES["id"]) or "").strip(),
-                    "login": (
-                        _pick_first(row, CSV_HEADER_ALIASES["client_number"])
-                        or _pick_first(row, CSV_HEADER_ALIASES["username"])
-                        or ""
-                    ).strip(),
-                }
-            )
-    return rows
-
-
-def _normalize_csv_import_rows(path: Path) -> list[dict]:
-    rows = []
-    with path.open("r", encoding="utf-8-sig", errors="replace", newline="") as file_obj:
-        for row in csv.DictReader(file_obj, delimiter=";"):
-            rows.append(
-                {
-                    "source_id": (_pick_first(row, CSV_HEADER_ALIASES["id"]) or "").strip(),
-                    "login": (
-                        _pick_first(row, CSV_HEADER_ALIASES["client_number"])
-                        or _pick_first(row, CSV_HEADER_ALIASES["username"])
-                        or ""
-                    ).strip(),
-                    "name": (_pick_first(row, CSV_HEADER_ALIASES["client_name"]) or "").strip(),
-                    "status": (_pick_first(row, CSV_HEADER_ALIASES["status"]) or "").strip(),
-                    "ico": (_pick_first(row, CSV_HEADER_ALIASES["ico"]) or "").strip(),
-                    "dic": (_pick_first(row, CSV_HEADER_ALIASES["dic"]) or "").strip(),
-                    "street": (_pick_first(row, CSV_HEADER_ALIASES["street"]) or "").strip(),
-                    "house": (_pick_first(row, CSV_HEADER_ALIASES["house"]) or "").strip(),
-                    "city": (_pick_first(row, CSV_HEADER_ALIASES["city"]) or "").strip(),
-                    "zip": (_pick_first(row, CSV_HEADER_ALIASES["zip"]) or "").strip(),
-                    "email": (_pick_first(row, CSV_HEADER_ALIASES["email"]) or "").strip(),
-                    "billing_email": (_pick_first(row, CSV_HEADER_ALIASES["billing_email"]) or "").strip(),
-                    "technical_email": (_pick_first(row, CSV_HEADER_ALIASES["technical_email"]) or "").strip(),
-                    "business_email": (_pick_first(row, CSV_HEADER_ALIASES["business_email"]) or "").strip(),
-                    "mobile": (_pick_first(row, CSV_HEADER_ALIASES["mobile"]) or "").strip(),
-                    "phone": (_pick_first(row, CSV_HEADER_ALIASES["phone"]) or "").strip(),
-                    "fax": (_pick_first(row, CSV_HEADER_ALIASES["fax"]) or "").strip(),
-                }
-            )
-    return rows
 
 
 def _ispadmin_config(env: dict) -> dict:
@@ -495,24 +378,6 @@ def _normalize_ispadmin_import_rows(env: dict) -> list[dict]:
     return _normalize_ispadmin_client_rows(env, active=1)
 
 
-def _prepare_csv_source() -> dict:
-    _validate_uploaded_csv(CSV_DEACT_FILE, CSV_DEACT_REQUIRED, "deaktivovani-klienti.csv")
-    _validate_uploaded_csv(CSV_IMPORT_FILE, CSV_IMPORT_REQUIRED, "kontakty.csv")
-    spec = {
-        "mode": "csv",
-        "label": "CSV",
-        "prepared_at": datetime.now(UTC).isoformat(),
-        "deactivate_path": str(CSV_DEACT_FILE),
-        "import_path": str(CSV_IMPORT_FILE),
-        "summary": {
-            "deactivate_count": len(_normalize_csv_deactivation_rows(CSV_DEACT_FILE)),
-            "import_count": len(_normalize_csv_import_rows(CSV_IMPORT_FILE)),
-        },
-    }
-    _save_prepared_source(spec)
-    return spec
-
-
 def _prepare_api_source() -> dict:
     env = _load_env(SECRETS_ENV)
     deact_rows = _normalize_ispadmin_deactivation_rows(env)
@@ -535,20 +400,15 @@ def _prepare_api_source() -> dict:
 
 
 def _load_source_rows(spec: dict) -> tuple[list[dict], list[dict]]:
-    mode = spec.get("mode")
-    if mode == "csv":
-        deact_path = Path(spec["deactivate_path"])
-        import_path = Path(spec["import_path"])
-        return _normalize_csv_deactivation_rows(deact_path), _normalize_csv_import_rows(import_path)
-    if mode == "api":
-        deact_path = Path(spec.get("deactivate_path", ""))
-        import_path = Path(spec["import_path"])
-        deact_rows = _load_json(deact_path) if deact_path.exists() else []
-        import_rows = _load_json(import_path)
-        if not isinstance(deact_rows, list) or not isinstance(import_rows, list):
-            raise RuntimeError("Prepared ISPAdmin snapshot is invalid.")
-        return deact_rows, import_rows
-    raise RuntimeError(f"Unsupported source mode: {mode}")
+    if spec.get("mode") != "api":
+        raise RuntimeError(f"Unsupported source mode: {spec.get('mode')}")
+    deact_path = Path(spec.get("deactivate_path", ""))
+    import_path = Path(spec["import_path"])
+    deact_rows = _load_json(deact_path) if deact_path.exists() else []
+    import_rows = _load_json(import_path)
+    if not isinstance(deact_rows, list) or not isinstance(import_rows, list):
+        raise RuntimeError("Prepared ISPAdmin snapshot is invalid.")
+    return deact_rows, import_rows
 
 
 def _run_job(source_spec: dict):
@@ -880,57 +740,19 @@ def index():
 def sync_logo():
     return FileResponse(BASE_DIR / "sync-logo.svg", media_type="image/svg+xml")
 
-
-@app.post("/api/upload")
-async def upload_files(deactivate_csv: UploadFile = File(...), import_csv: UploadFile = File(...)):
-    if STATE.running:
-        raise HTTPException(status_code=409, detail="Run is in progress")
-
-    _cleanup_uploads()
-    CSV_DEACT_FILE.write_bytes(await deactivate_csv.read())
-    CSV_IMPORT_FILE.write_bytes(await import_csv.read())
-    _prepare_csv_source()
-
-    _append_log("CSV files uploaded and validated")
-    return {"ok": True, "source": _source_status()}
-
-
-@app.post("/api/prepare-api-source")
-def prepare_api_source():
-    if STATE.running:
-        raise HTTPException(status_code=409, detail="Run is in progress")
-
-    try:
-        _cleanup_uploads()
-        _prepare_api_source()
-    except RuntimeError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    _append_log("ISPAdmin API source prepared")
-    return {"ok": True, "source": _source_status()}
-
-
 @app.post("/api/start")
-def start_job(payload: dict | None = Body(default=None)):
+def start_job():
     if STATE.running:
         raise HTTPException(status_code=409, detail="Run already in progress")
 
-    requested_mode = (payload or {}).get("source_mode")
-    if requested_mode == "api":
-        spec = {
-            "mode": "api",
-            "label": "ISPAdmin API",
-            "prepared_at": datetime.now(UTC).isoformat(),
-            "deactivate_path": None,
-            "import_path": None,
-            "summary": {},
-        }
-    else:
-        spec = _load_prepared_source()
-        if not spec:
-            raise HTTPException(status_code=400, detail="Prepare a CSV or ISPAdmin API source first")
-        if requested_mode and requested_mode != spec.get("mode"):
-            raise HTTPException(status_code=400, detail="Prepared source mode does not match selected mode")
+    spec = {
+        "mode": "api",
+        "label": "ISPAdmin API",
+        "prepared_at": datetime.now(UTC).isoformat(),
+        "deactivate_path": None,
+        "import_path": None,
+        "summary": {},
+    }
 
     _append_log(f"Job starting from {spec.get('label')}...")
     thread = threading.Thread(target=_run_job, args=(spec,), daemon=True)

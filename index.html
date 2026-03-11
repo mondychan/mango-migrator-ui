@@ -214,11 +214,7 @@ function stopKeepalive() {
 }
 
 async function startJob() {
-  const r = await fetch('/api/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ source_mode: 'api' }),
-  });
+  const r = await fetch('/api/start', { method: 'POST' });
   const j = await r.json();
   if (!r.ok) return alert(j.detail || 'Start failed');
   suppressCompletedHydration = false;
