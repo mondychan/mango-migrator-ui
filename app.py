@@ -270,7 +270,7 @@ def _build_telegram_message(report: dict) -> str:
         f"{html.escape(label.ljust(width))}  {value}" for label, value in stats
     )
     lines = [
-        "<b>Synchronizace ISPAdmin -&gt; Mango</b>",
+        "<b>Synchronizace ISPAdmin -&gt; MangoISP</b>",
         "",
         f"<b>Stav:</b> {html.escape(_notification_status_label(report.get('status', 'done')))}",
         f"<b>Typ behu:</b> {html.escape(_notification_run_reason_label(str(report.get('run_reason', 'manual'))))}",
