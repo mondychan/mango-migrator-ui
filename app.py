@@ -225,7 +225,7 @@ def _notification_status_label(status: str) -> str:
 
 def _notification_run_reason_label(reason: str) -> str:
     return {
-        "manual": "rucne",
+        "manual": "rucni",
         "schedule": "automaticky",
     }.get(reason, reason)
 
