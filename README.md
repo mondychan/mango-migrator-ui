@@ -46,6 +46,8 @@ Aplikace cte runtime konfiguraci z `cibs.env`.
 - `CIBS_USERNAME`
 - `CIBS_PASSWORD`
 
+`CIBS_CT` je povinny a musi byt vyplneny v `cibs.env`.
+
 ### ISPAdmin REST API
 
 - `ISPADMIN_API_BASE_URL`

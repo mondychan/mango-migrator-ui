@@ -774,7 +774,9 @@ def _run_job(source_spec: dict, run_reason: str):
         url = base.rstrip("/") + "/ws_cibs.php"
         verify = env.get("CIBS_VERIFY_TLS", "true").lower() == "true"
         user, pwd = env["CIBS_USERNAME"], env["CIBS_PASSWORD"]
-        ct = (env.get("CIBS_CT") or "").strip() or "252"
+        ct = (env.get("CIBS_CT") or "").strip()
+        if not ct:
+            raise RuntimeError("CIBS_CT is not configured.")
 
         _set_progress("login", 1)
         _append_log("Login to Mango SOAP")
