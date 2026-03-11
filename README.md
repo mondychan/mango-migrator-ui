@@ -38,6 +38,7 @@ Aplikace cte runtime konfiguraci z `cibs.env`.
 - `CIBS_BASE_URL_TEST`
 - `CIBS_BASE_URL_PROD`
 - `CIBS_VERIFY_TLS`
+- `CIBS_CT`
 - `CIBS_USERNAME`
 - `CIBS_PASSWORD`
 
