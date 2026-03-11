@@ -49,10 +49,27 @@ Aplikace cte runtime konfiguraci z `cibs.env`.
 - `ISPADMIN_VERIFY_TLS`
 - `ISPADMIN_API_TIMEOUT_SEC`
 
+### Telegram notifications
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+- `TELEGRAM_MESSAGE_THREAD_ID`
+  - volitelne, jen pokud posilas do konkretniho topicu ve forum group chatu
+- `TELEGRAM_DISABLE_WEB_PREVIEW`
+- `TELEGRAM_API_TIMEOUT_SEC`
+
 ### Volitelne runtime nastaveni
 
 - `MANGO_KEEPALIVE_TIMEOUT_SEC`
 - `MANGO_SCHEDULER_POLL_SEC`
+
+Pokud jsou `TELEGRAM_BOT_TOKEN` a `TELEGRAM_CHAT_ID` vyplnene, aplikace po kazdem behu posle Telegram zpravu s:
+
+- stavem behu (`done`, `error`, `cancelled`)
+- typem behu (`manual`, `schedule`)
+- zacatkem, koncem a delkou behu
+- statistikou deaktivaci a importu
+- pripadnou chybou
 
 ## Lokalni beh
 

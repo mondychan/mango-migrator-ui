@@ -144,6 +144,142 @@ def _schedule_status() -> dict:
         return dict(SCHEDULE_STATE)
 
 
+def _parse_iso_dt(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except Exception:
+        return None
+
+
+def _format_duration(seconds: float | int | None) -> str:
+    if seconds is None:
+        return "-"
+    total = max(0, int(round(float(seconds))))
+    hours, rem = divmod(total, 3600)
+    minutes, secs = divmod(rem, 60)
+    if hours:
+        return f"{hours}h {minutes}m {secs}s"
+    if minutes:
+        return f"{minutes}m {secs}s"
+    return f"{secs}s"
+
+
+def _telegram_config(env: dict) -> dict | None:
+    token = (env.get("TELEGRAM_BOT_TOKEN") or "").strip()
+    chat_id = (env.get("TELEGRAM_CHAT_ID") or "").strip()
+    if not token or not chat_id:
+        return None
+    thread_id_raw = (env.get("TELEGRAM_MESSAGE_THREAD_ID") or "").strip()
+    disable_preview = (env.get("TELEGRAM_DISABLE_WEB_PREVIEW", "true").strip().lower() == "true")
+    config = {
+        "token": token,
+        "chat_id": chat_id,
+        "timeout": int(env.get("TELEGRAM_API_TIMEOUT_SEC", "20")),
+        "disable_preview": disable_preview,
+    }
+    if thread_id_raw:
+        try:
+            config["message_thread_id"] = int(thread_id_raw)
+        except Exception:
+            raise RuntimeError("TELEGRAM_MESSAGE_THREAD_ID must be an integer.")
+    return config
+
+
+def _telegram_send_message(config: dict, text: str):
+    payload = {
+        "chat_id": config["chat_id"],
+        "text": text,
+        "disable_web_page_preview": config["disable_preview"],
+    }
+    if "message_thread_id" in config:
+        payload["message_thread_id"] = config["message_thread_id"]
+
+    response = requests.post(
+        f"https://api.telegram.org/bot{config['token']}/sendMessage",
+        json=payload,
+        timeout=config["timeout"],
+    )
+    try:
+        data = response.json()
+    except ValueError:
+        data = None
+    if response.status_code >= 400:
+        detail = response.text[:400]
+        if isinstance(data, dict):
+            detail = data.get("description") or json.dumps(data, ensure_ascii=False)
+        raise RuntimeError(f"Telegram sendMessage failed ({response.status_code}): {detail}")
+    if isinstance(data, dict) and not data.get("ok", False):
+        raise RuntimeError(f"Telegram sendMessage rejected: {json.dumps(data, ensure_ascii=False)}")
+
+
+def _notification_status_label(status: str) -> str:
+    return {
+        "done": "DONE",
+        "error": "ERROR",
+        "cancelled": "CANCELLED",
+    }.get(status, status.upper())
+
+
+def _finalize_report(report: dict, status: str, error_message: str | None = None) -> dict:
+    started_at = _parse_iso_dt(report.get("started_at"))
+    finished_at = _parse_iso_dt(report.get("finished_at"))
+    duration_seconds = None
+    if started_at and finished_at:
+        duration_seconds = max(0.0, (finished_at - started_at).total_seconds())
+
+    report["status"] = status
+    report["error"] = error_message
+    report["deactivated_count"] = len(report["deactivated"])
+    report["deactivate_skipped_count"] = len(report["deactivate_skipped"])
+    report["deactivate_errors_count"] = len(report["deactivate_errors"])
+    report["created_count"] = len(report["created"])
+    report["import_skipped_count"] = len(report["import_skipped"])
+    report["import_errors_count"] = len(report["import_errors"])
+    report["duration_seconds"] = duration_seconds
+    return report
+
+
+def _build_telegram_message(report: dict) -> str:
+    started_at = _parse_iso_dt(report.get("started_at"))
+    finished_at = _parse_iso_dt(report.get("finished_at"))
+    started = started_at.astimezone().strftime("%Y-%m-%d %H:%M:%S") if started_at else "-"
+    finished = finished_at.astimezone().strftime("%Y-%m-%d %H:%M:%S") if finished_at else "-"
+    source_summary = report.get("source_summary") or {}
+    lines = [
+        "ISPAdmin -> Mango sync",
+        f"Status: {_notification_status_label(report.get('status', 'done'))}",
+        f"Run type: {report.get('run_reason', 'manual')}",
+        f"Started: {started}",
+        f"Finished: {finished}",
+        f"Duration: {_format_duration(report.get('duration_seconds'))}",
+        f"Source active=1: {source_summary.get('import_count', 0)}",
+        f"Source active=0: {source_summary.get('deactivate_count', 0)}",
+        f"Deaktivovano: {report.get('deactivated_count', 0)}",
+        f"Preskoceno (deaktivace): {report.get('deactivate_skipped_count', 0)}",
+        f"Chyby (deaktivace): {report.get('deactivate_errors_count', 0)}",
+        f"Vytvoreno: {report.get('created_count', 0)}",
+        f"Preskoceno (import): {report.get('import_skipped_count', 0)}",
+        f"Chyby (import): {report.get('import_errors_count', 0)}",
+    ]
+    if report.get("error"):
+        lines.append(f"Error: {report['error']}")
+    return "\n".join(lines)
+
+
+def _notify_telegram(report: dict):
+    try:
+        env = _load_env(SECRETS_ENV)
+        config = _telegram_config(env)
+        if not config:
+            return
+        _telegram_send_message(config, _build_telegram_message(report))
+        _append_log("Telegram notification sent.")
+    except Exception as exc:
+        _append_log(f"Telegram notification failed: {exc}")
+
+
 def _keepalive_watchdog():
     while True:
         time.sleep(3)
@@ -824,12 +960,7 @@ def _run_job(source_spec: dict, run_reason: str):
             session = None
 
         report["finished_at"] = datetime.now(UTC).isoformat()
-        report["deactivated_count"] = len(report["deactivated"])
-        report["deactivate_skipped_count"] = len(report["deactivate_skipped"])
-        report["deactivate_errors_count"] = len(report["deactivate_errors"])
-        report["created_count"] = len(report["created"])
-        report["import_skipped_count"] = len(report["import_skipped"])
-        report["import_errors_count"] = len(report["import_errors"])
+        _finalize_report(report, "done")
 
         report_path = REPORTS_DIR / f"run-{int(time.time())}.json"
         _write_json(report_path, report)
@@ -858,6 +989,7 @@ def _run_job(source_spec: dict, run_reason: str):
             f"import_errors={report['import_errors_count']}"
         )
         _append_log(f"Done. Report: {report_path}")
+        _notify_telegram(report)
 
     except Exception as exc:
         cancelled = str(exc) == "RUN_CANCELLED_BY_USER"
@@ -865,10 +997,13 @@ def _run_job(source_spec: dict, run_reason: str):
             STATE.current["error"] = None if cancelled else str(exc)
             STATE.current["stage"] = "cancelled" if cancelled else "error"
             STATE.current["finished_at"] = datetime.now(UTC).isoformat()
+        report["finished_at"] = datetime.now(UTC).isoformat()
+        _finalize_report(report, "cancelled" if cancelled else "error", None if cancelled else str(exc))
         if cancelled:
             _append_log("Run cancelled by user.")
         else:
             _append_log(f"ERROR: {exc}")
+        _notify_telegram(report)
     finally:
         if session and url:
             try:
