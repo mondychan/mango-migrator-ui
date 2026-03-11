@@ -1,5 +1,9 @@
 # Mango Migrator UI
 
+<p align="center">
+  <img src="mango-migrator-avatar.png" alt="Mango Migrator avatar" width="280">
+</p>
+
 Webova aplikace pro synchronizaci klientu z ISPAdmin REST API do Mango SOAP API.
 
 ## Co aplikace dela
