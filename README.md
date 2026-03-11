@@ -87,6 +87,40 @@ docker compose up -d --build
 
 UI pobezi na `http://localhost:8099`.
 
+## GHCR image
+
+Repo obsahuje GitHub Actions workflow, ktere po pushi do `main` postavi a publikuje Docker image do GitHub Container Registry:
+
+- `ghcr.io/mondychan/mango-migrator-ui:latest`
+- `ghcr.io/mondychan/mango-migrator-ui:main`
+- `ghcr.io/mondychan/mango-migrator-ui:sha-...`
+
+Pro server deploy bez lokalniho buildu muzes pouzit compose ve stylu:
+
+```yaml
+services:
+  fortenet-mango-migrator:
+    image: ghcr.io/mondychan/mango-migrator-ui:latest
+    container_name: fortenet-mango-migrator
+    restart: unless-stopped
+    volumes:
+      - fortenet_mango_migrator_data:/app/data
+      - ./cibs.env:/app/cibs.env:ro
+    environment:
+      - TZ=Europe/Prague
+      - MANGO_SECRETS_ENV=/app/cibs.env
+
+volumes:
+  fortenet_mango_migrator_data:
+
+networks:
+  default:
+    external: true
+    name: web
+```
+
+Pak na serveru staci pull noveho image a recreate kontejneru bez `--build`.
+
 ## Backend endpointy
 
 - `GET /`
