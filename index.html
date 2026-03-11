@@ -25,6 +25,7 @@
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .row.spread{justify-content:space-between}
     .muted{font-size:13px;color:#eef3ff}
+    label{display:block;font-size:13px;color:#eef3ff;margin-bottom:4px}
     button{border:1px solid transparent;border-radius:10px;padding:10px 14px;background:var(--gradient);color:var(--btn-ink);font-weight:700;cursor:pointer}
     button.secondary{background:rgba(160,183,242,.15);border-color:rgba(160,183,242,.4);color:#dfe8ff}
     button.danger{background:linear-gradient(120deg,#ff9f9f,#ff7a7a);color:#421515}
@@ -41,6 +42,7 @@
     .summary{margin-top:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
     .chip{background:rgba(12,18,40,.75);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px}
     pre{margin:0;max-height:360px;overflow:auto;background:#070b17;border:1px solid #25345f;border-radius:10px;padding:12px;color:#b9f7d4;font-size:12px;font-family:"IBM Plex Mono",monospace;white-space:pre-wrap;word-break:break-word}
+    input[type="time"],input[type="number"]{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(12,18,40,.8);color:#fff}
     .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:999}
     .modal-backdrop.collapsed{display:none!important}
     .modal{max-width:520px;width:calc(100% - 24px);background:rgba(10,16,36,.97);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
@@ -64,6 +66,28 @@
         <div class="badge" id="lastRunInfo">Last run: -</div>
       </div>
     </header>
+
+    <div class="card" id="scheduleCard">
+      <div class="row spread">
+        <h3>Automaticky beh</h3>
+        <div class="muted" id="scheduleMeta">Scheduler vypnuty.</div>
+      </div>
+      <div class="row" style="align-items:flex-end">
+        <label style="display:flex;gap:8px;align-items:center;margin:0 14px 0 0">
+          <input id="scheduleEnabled" type="checkbox" />
+          <span>Enable automated sync</span>
+        </label>
+        <div style="min-width:180px;flex:0 1 180px">
+          <label for="scheduleTime">Start time</label>
+          <input id="scheduleTime" type="time" value="02:00" />
+        </div>
+        <div style="min-width:180px;flex:0 1 180px">
+          <label for="scheduleInterval">Interval (hours)</label>
+          <input id="scheduleInterval" type="number" min="1" max="168" value="24" />
+        </div>
+        <button class="secondary" id="saveScheduleBtn">Save schedule</button>
+      </div>
+    </div>
 
     <div class="card" id="step2Card">
       <h3>Spustit job</h3>
@@ -121,6 +145,8 @@ const $ = (id) => document.getElementById(id);
 let keepaliveTimer = null;
 let lastCompletedRunText = 'Last run: -';
 let suppressCompletedHydration = true;
+let scheduleDirty = false;
+window.__keepaliveRequired = false;
 
 function reportNameFromPath(path) {
   if (!path) return '';
@@ -146,6 +172,12 @@ function sanitizeHydratedStatus(s) {
     started_at: null,
     finished_at: null,
   };
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? '-' : d.toLocaleString('cs-CZ');
 }
 
 async function loadReports() {
@@ -213,6 +245,24 @@ function stopKeepalive() {
   keepaliveTimer = null;
 }
 
+async function saveSchedule() {
+  const intervalHours = Math.max(1, Math.min(168, Number($('scheduleInterval').value) || 24));
+  const payload = {
+    enabled: $('scheduleEnabled').checked,
+    time: $('scheduleTime').value || '02:00',
+    interval_hours: intervalHours,
+  };
+  const r = await fetch('/api/schedule', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const j = await r.json();
+  if (!r.ok) return alert(j.detail || 'Schedule save failed');
+  scheduleDirty = false;
+  renderSchedule(j.schedule || {});
+}
+
 async function startJob() {
   const r = await fetch('/api/start', { method: 'POST' });
   const j = await r.json();
@@ -240,12 +290,28 @@ function summaryHtml(s) {
     <div class="chip"><b>Chyby (import)</b><br>${x.import_errors_count ?? 0}</div>`;
 }
 
+function renderSchedule(schedule) {
+  const enabled = !!schedule.enabled;
+  if (!scheduleDirty) {
+    $('scheduleEnabled').checked = enabled;
+    $('scheduleTime').value = schedule.time || '02:00';
+    $('scheduleInterval').value = String(schedule.interval_hours ?? 24);
+  }
+
+  const nextRun = enabled ? formatDateTime(schedule.next_run_at) : '-';
+  const lastAuto = formatDateTime(schedule.last_auto_started_at);
+  $('scheduleMeta').textContent = enabled
+    ? `Next run: ${nextRun} | Last auto start: ${lastAuto}`
+    : 'Scheduler vypnuty.';
+}
+
 function render(s) {
   s = sanitizeHydratedStatus(s);
   const running = !!s.running;
   const cancelReq = !!s.cancel_requested;
+  const runReason = s.run_reason ? ` • ${s.run_reason}` : '';
 
-  $('stage').textContent = `${s.stage || 'idle'} (${s.percent || 0}%)` + (cancelReq ? ' • stopping...' : '');
+  $('stage').textContent = `${s.stage || 'idle'} (${s.percent || 0}%)${runReason}` + (cancelReq ? ' • stopping...' : '');
   $('progBar').style.width = `${s.percent || 0}%`;
   $('progWrap').classList.toggle('running', running && !cancelReq);
   $('progWrap').classList.toggle('stopping', cancelReq);
@@ -254,11 +320,13 @@ function render(s) {
   $('logCard').classList.toggle('collapsed', !(running || (s.log || []).length || s.summary || s.report_path || s.error));
   $('lastRunInfo').textContent = running ? `${lastCompletedRunText} • running` : lastCompletedRunText;
   window.__lastReportPath = s.report_path || '';
+  window.__keepaliveRequired = !!s.keepalive_required;
   $('report').innerHTML = s.report_path ? `Report: <code>${s.report_path}</code>` : '';
   $('summary').innerHTML = summaryHtml(s);
+  renderSchedule(s.schedule || {});
   if (s.report_path) loadReports().catch(() => {});
 
-  if (running) startKeepalive(); else stopKeepalive();
+  if (running && s.keepalive_required) startKeepalive(); else stopKeepalive();
 
   $('runBtn').dataset.running = running ? '1' : '';
   $('runBtn').textContent = cancelReq ? 'Stopping...' : (running ? 'Stop' : 'Start');
@@ -289,6 +357,10 @@ $('displayCurrentReportBtn').onclick = async () => {
   if (!name) return alert('Aktualni report neni k dispozici.');
   await showReport(name);
 };
+$('saveScheduleBtn').onclick = () => saveSchedule();
+$('scheduleEnabled').onchange = () => { scheduleDirty = true; };
+$('scheduleTime').oninput = () => { scheduleDirty = true; };
+$('scheduleInterval').oninput = () => { scheduleDirty = true; };
 
 const es = new EventSource('/api/events');
 es.onmessage = (e) => {
@@ -308,10 +380,9 @@ fetch('/api/status')
 loadReports().catch(() => {});
 
 window.addEventListener('beforeunload', () => {
-  const running = $('runBtn').dataset.running === '1';
-  if (!running) return;
+  if (!window.__keepaliveRequired) return;
   try {
-    navigator.sendBeacon('/api/disconnect?stop=true', '1');
+    navigator.sendBeacon('/api/disconnect', '1');
   } catch {}
 });
 </script>

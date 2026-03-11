@@ -1,23 +1,36 @@
 # Mango Migrator UI
 
-Webová aplikace pro one-button synchronizaci klientů z ISPAdmin REST API do Mango SOAP API.
+Webova aplikace pro synchronizaci klientu z ISPAdmin REST API do Mango SOAP API.
 
-## Co aplikace dělá
+## Co aplikace dela
 
-Po kliknutí na `Start` aplikace:
+Po kliknuti na `Start` aplikace:
 
-1. načte deaktivované klienty z ISPAdmin API přes `GET /clients?active=0`
-2. načte aktivní klienty z ISPAdmin API přes `GET /clients?active=1`
-3. načte aktivní uživatele z Mango
-4. lokálně porovná data
-5. do Mango zapíše jen změny:
-   - deaktivuje klienty, kteří jsou v ISPAdminu odpojení
-   - vytvoří klienty, kteří jsou v ISPAdminu aktivní a v Mango ještě nejsou
-6. uloží JSON report do `data/reports`
+1. nacte deaktivovane klienty z ISPAdmin API pres `GET /clients?active=0`
+2. nacte aktivni klienty z ISPAdmin API pres `GET /clients?active=1`
+3. nacte aktivni uzivatele z Mango
+4. lokalne porovna data
+5. do Mango zapise jen zmeny:
+   - deaktivuje klienty, kteri jsou v ISPAdminu odpojeni
+   - vytvori klienty, kteri jsou v ISPAdminu aktivni a v Mango jeste nejsou
+6. ulozi JSON report do `data/reports`
+
+## Automaticky beh
+
+Aplikace umi planovany autorun:
+
+- `Enable automated sync` zapne scheduler
+- `Start time` urci prvni cas spusteni
+- `Interval (hours)` urci periodu dalsich behu
+- scheduler a manualni `Start` pouzivaji stejny run guard, takze nikdy nepobezi dva joby soucasne
+- pokud je v case autorunu jiz spusten manualni nebo jiny planovany beh, scheduler pocka a spusti dalsi beh az po uvolneni locku
+- heartbeat watchdog hlida jen manualni behy z browseru; scheduler bezi server-side bez zavislosti na otevrene strance
+
+Konfigurace scheduleru je ulozena v `data/schedule.json`.
 
 ## Konfigurace
 
-Aplikace čte runtime konfiguraci z `cibs.env`.
+Aplikace cte runtime konfiguraci z `cibs.env`.
 
 ### Mango SOAP
 
@@ -31,18 +44,23 @@ Aplikace čte runtime konfiguraci z `cibs.env`.
 ### ISPAdmin REST API
 
 - `ISPADMIN_API_BASE_URL`
-  - např. `https://your-ispadmin.example/api/v1`
+  - napr. `https://your-ispadmin.example/api/v1`
 - `ISPADMIN_API_TOKEN`
 - `ISPADMIN_VERIFY_TLS`
 - `ISPADMIN_API_TIMEOUT_SEC`
 
-## Lokální běh
+### Volitelne runtime nastaveni
+
+- `MANGO_KEEPALIVE_TIMEOUT_SEC`
+- `MANGO_SCHEDULER_POLL_SEC`
+
+## Lokalni beh
 
 ```bash
 docker compose up -d --build
 ```
 
-UI poběží na `http://localhost:8099`.
+UI pobezi na `http://localhost:8099`.
 
 ## Backend endpointy
 
@@ -51,17 +69,18 @@ UI poběží na `http://localhost:8099`.
 - `POST /api/start`
 - `POST /api/stop?confirm=STOP`
 - `POST /api/keepalive`
-- `POST /api/disconnect?stop=true`
+- `POST /api/disconnect`
+- `POST /api/schedule`
 - `GET /api/status`
 - `GET /api/events`
 - `GET /api/reports`
 - `GET /api/reports/{name}`
 - `GET /api/reports/{name}/download`
 
-## Poznámky
+## Poznamky
 
-- běží vždy jen jeden job
+- bezi vzdy jen jeden job
 - stop je safe-stop, ne hard kill
-- import i deaktivace se párují do Mango přes `clientNumber` z ISPAdminu
-- pokud klient v ISPAdmin API nemá `clientNumber`, záznam se přeskočí
-- reporty jsou ukládány do `/app/data/reports`
+- import i deaktivace se paruji do Mango pres `clientNumber` z ISPAdminu
+- pokud klient v ISPAdmin API nema `clientNumber`, zaznam se preskoci
+- reporty jsou ukladany do `/app/data/reports`

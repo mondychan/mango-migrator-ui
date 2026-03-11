@@ -6,12 +6,12 @@ import re
 import shutil
 import threading
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time as dt_time, timedelta
 from pathlib import Path
 from typing import Any, Dict
 
 import requests
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -22,6 +22,7 @@ SECRETS_ENV = Path(os.environ.get("MANGO_SECRETS_ENV", "/app/cibs.env"))
 PREPARED_SOURCE_FILE = UPLOAD_DIR / "source.json"
 API_DEACT_FILE = UPLOAD_DIR / "ispadmin-inactive-clients.json"
 API_IMPORT_FILE = UPLOAD_DIR / "ispadmin-active-clients.json"
+SCHEDULE_FILE = DATA_DIR / "schedule.json"
 
 for p in (UPLOAD_DIR, REPORTS_DIR):
     p.mkdir(parents=True, exist_ok=True)
@@ -47,6 +48,8 @@ class JobState:
             "report_path": None,
             "cancel_requested": False,
             "last_keepalive": None,
+            "keepalive_required": False,
+            "run_reason": None,
             "source_mode": None,
             "source_label": None,
         }
@@ -55,6 +58,90 @@ class JobState:
 STATE = JobState()
 STATE.reset()
 KEEPALIVE_TIMEOUT_SEC = int(os.environ.get("MANGO_KEEPALIVE_TIMEOUT_SEC", "90"))
+SCHEDULER_POLL_SEC = max(5, int(os.environ.get("MANGO_SCHEDULER_POLL_SEC", "15")))
+SCHEDULE_LOCK = threading.Lock()
+
+
+def _default_schedule() -> dict:
+    return {
+        "enabled": False,
+        "time": "02:00",
+        "interval_hours": 24,
+        "next_run_at": None,
+        "last_auto_started_at": None,
+    }
+
+
+def _parse_schedule_time(value: str) -> dt_time:
+    try:
+        return datetime.strptime(str(value).strip(), "%H:%M").time()
+    except Exception:
+        return dt_time(2, 0)
+
+
+def _next_run_at(now: datetime, start_time: dt_time, interval_hours: int) -> datetime:
+    candidate = datetime.combine(now.date(), start_time)
+    if candidate > now:
+        return candidate
+    delta_hours = (now - candidate).total_seconds() / 3600.0
+    steps = int(delta_hours // interval_hours) + 1
+    return candidate + timedelta(hours=steps * interval_hours)
+
+
+def _normalize_schedule(payload: dict | None) -> dict:
+    current = _default_schedule()
+    if isinstance(payload, dict):
+        current.update(payload)
+
+    enabled = current.get("enabled", False)
+    if isinstance(enabled, str):
+        enabled = enabled.strip().lower() in {"1", "true", "yes", "on"}
+
+    schedule_time = str(current.get("time") or "02:00").strip()
+    schedule_time = _parse_schedule_time(schedule_time).strftime("%H:%M")
+
+    try:
+        interval_hours = int(current.get("interval_hours", 24))
+    except Exception:
+        interval_hours = 24
+
+    next_run_at = current.get("next_run_at")
+    if next_run_at is not None:
+        next_run_at = str(next_run_at).strip() or None
+
+    last_auto_started_at = current.get("last_auto_started_at")
+    if last_auto_started_at is not None:
+        last_auto_started_at = str(last_auto_started_at).strip() or None
+
+    return {
+        "enabled": bool(enabled),
+        "time": schedule_time,
+        "interval_hours": max(1, min(interval_hours, 168)),
+        "next_run_at": next_run_at,
+        "last_auto_started_at": last_auto_started_at,
+    }
+
+
+def _load_schedule() -> dict:
+    if not SCHEDULE_FILE.exists():
+        return _default_schedule()
+    try:
+        return _normalize_schedule(json.loads(SCHEDULE_FILE.read_text(encoding="utf-8")))
+    except Exception:
+        return _default_schedule()
+
+
+def _save_schedule(schedule: dict):
+    normalized = _normalize_schedule(schedule)
+    _write_json(SCHEDULE_FILE, normalized)
+
+
+SCHEDULE_STATE = _load_schedule()
+
+
+def _schedule_status() -> dict:
+    with SCHEDULE_LOCK:
+        return dict(SCHEDULE_STATE)
 
 
 def _keepalive_watchdog():
@@ -64,7 +151,8 @@ def _keepalive_watchdog():
             running = STATE.running
             cancel_requested = bool(STATE.current.get("cancel_requested"))
             last_keepalive = STATE.current.get("last_keepalive")
-        if not running or cancel_requested or not last_keepalive:
+            keepalive_required = bool(STATE.current.get("keepalive_required"))
+        if not running or cancel_requested or not keepalive_required or not last_keepalive:
             continue
         if (time.time() - float(last_keepalive)) > KEEPALIVE_TIMEOUT_SEC:
             with STATE.lock:
@@ -73,6 +161,48 @@ def _keepalive_watchdog():
 
 
 threading.Thread(target=_keepalive_watchdog, daemon=True).start()
+
+
+def _scheduler_loop():
+    next_run: datetime | None = None
+    signature = None
+    while True:
+        schedule = _schedule_status()
+        enabled = bool(schedule.get("enabled"))
+        if not enabled:
+            next_run = None
+            signature = None
+            with SCHEDULE_LOCK:
+                if SCHEDULE_STATE.get("next_run_at") is not None:
+                    SCHEDULE_STATE["next_run_at"] = None
+                    _save_schedule(SCHEDULE_STATE)
+            time.sleep(SCHEDULER_POLL_SEC)
+            continue
+
+        current_signature = (schedule.get("enabled"), schedule.get("time"), schedule.get("interval_hours"))
+        if signature != current_signature or next_run is None:
+            next_run = _next_run_at(datetime.now(), _parse_schedule_time(schedule.get("time", "02:00")), int(schedule.get("interval_hours", 24)))
+            signature = current_signature
+            with SCHEDULE_LOCK:
+                SCHEDULE_STATE["next_run_at"] = next_run.isoformat()
+                _save_schedule(SCHEDULE_STATE)
+
+        if next_run and datetime.now() >= next_run:
+            started = _start_job("schedule")
+            if started:
+                with SCHEDULE_LOCK:
+                    SCHEDULE_STATE["last_auto_started_at"] = datetime.now(UTC).isoformat()
+                    _save_schedule(SCHEDULE_STATE)
+                interval = max(1, int(schedule.get("interval_hours", 24)))
+                while next_run <= datetime.now():
+                    next_run += timedelta(hours=interval)
+                with SCHEDULE_LOCK:
+                    SCHEDULE_STATE["next_run_at"] = next_run.isoformat()
+                    _save_schedule(SCHEDULE_STATE)
+            time.sleep(SCHEDULER_POLL_SEC)
+            continue
+
+        time.sleep(SCHEDULER_POLL_SEC)
 
 
 def _append_log(msg: str):
@@ -411,21 +541,41 @@ def _load_source_rows(spec: dict) -> tuple[list[dict], list[dict]]:
     return deact_rows, import_rows
 
 
-def _run_job(source_spec: dict):
+def _start_job(reason: str) -> bool:
+    source_spec = {
+        "mode": "api",
+        "label": "ISPAdmin API",
+        "prepared_at": datetime.now(UTC).isoformat(),
+        "deactivate_path": None,
+        "import_path": None,
+        "summary": {},
+    }
+    keepalive_required = reason == "manual"
+
     with STATE.lock:
         if STATE.running:
-            return
+            return False
         STATE.running = True
         STATE.reset()
         STATE.current["started_at"] = datetime.now(UTC).isoformat()
         STATE.current["stage"] = "starting"
         STATE.current["percent"] = 1
-        STATE.current["last_keepalive"] = time.time()
+        STATE.current["last_keepalive"] = time.time() if keepalive_required else None
+        STATE.current["keepalive_required"] = keepalive_required
+        STATE.current["run_reason"] = reason
         STATE.current["source_mode"] = source_spec.get("mode")
         STATE.current["source_label"] = source_spec.get("label")
 
+    thread = threading.Thread(target=_run_job, args=(source_spec, reason), daemon=True)
+    thread.start()
+    return True
+
+
+def _run_job(source_spec: dict, run_reason: str):
+
     report = {
         "started_at": datetime.now(UTC).isoformat(),
+        "run_reason": run_reason,
         "source_mode": source_spec.get("mode"),
         "source_label": source_spec.get("label"),
         "source_summary": source_spec.get("summary") or {},
@@ -443,6 +593,7 @@ def _run_job(source_spec: dict):
     verify = True
 
     try:
+        _append_log(f"Job starting ({run_reason})")
         if source_spec.get("mode") == "api":
             _set_progress("source_prepare", 1)
             _append_log("Loading client snapshots from ISPAdmin API...")
@@ -731,6 +882,9 @@ def _run_job(source_spec: dict):
             STATE.current["cancel_requested"] = False
 
 
+threading.Thread(target=_scheduler_loop, daemon=True).start()
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     return (BASE_DIR / "index.html").read_text(encoding="utf-8")
@@ -740,24 +894,29 @@ def index():
 def sync_logo():
     return FileResponse(BASE_DIR / "sync-logo.svg", media_type="image/svg+xml")
 
+
 @app.post("/api/start")
 def start_job():
-    if STATE.running:
+    if not _start_job("manual"):
         raise HTTPException(status_code=409, detail="Run already in progress")
+    return {"ok": True, "source": _source_status(), "schedule": _schedule_status()}
 
-    spec = {
-        "mode": "api",
-        "label": "ISPAdmin API",
-        "prepared_at": datetime.now(UTC).isoformat(),
-        "deactivate_path": None,
-        "import_path": None,
-        "summary": {},
-    }
 
-    _append_log(f"Job starting from {spec.get('label')}...")
-    thread = threading.Thread(target=_run_job, args=(spec,), daemon=True)
-    thread.start()
-    return {"ok": True, "source": _source_status()}
+@app.post("/api/schedule")
+def update_schedule(payload: dict = Body(...)):
+    updated = _normalize_schedule(payload)
+    updated["last_auto_started_at"] = _schedule_status().get("last_auto_started_at")
+    if updated["enabled"]:
+        next_run = _next_run_at(datetime.now(), _parse_schedule_time(updated["time"]), updated["interval_hours"])
+        updated["next_run_at"] = next_run.isoformat()
+    else:
+        updated["next_run_at"] = None
+
+    with SCHEDULE_LOCK:
+        SCHEDULE_STATE.update(updated)
+        _save_schedule(SCHEDULE_STATE)
+        current = dict(SCHEDULE_STATE)
+    return {"ok": True, "schedule": current}
 
 
 @app.post("/api/stop")
@@ -785,11 +944,12 @@ def keepalive():
 def disconnect(stop: bool = False):
     with STATE.lock:
         running = STATE.running
+        keepalive_required = bool(STATE.current.get("keepalive_required"))
         if running:
-            _touch_keepalive()
-            if stop:
+            STATE.current["last_keepalive"] = time.time()
+            if stop and keepalive_required:
                 STATE.current["cancel_requested"] = True
-    if running and stop:
+    if running and stop and keepalive_required:
         _append_log("Client disconnected/unloaded. Auto-stop requested.")
     return {"ok": True, "running": running}
 
@@ -833,6 +993,7 @@ def status():
     with STATE.lock:
         payload = {"running": STATE.running, **STATE.current}
     payload["prepared_source"] = _source_status()
+    payload["schedule"] = _schedule_status()
     return JSONResponse(payload)
 
 
@@ -844,6 +1005,7 @@ def events():
             with STATE.lock:
                 payload = {"running": STATE.running, **STATE.current}
             payload["prepared_source"] = _source_status()
+            payload["schedule"] = _schedule_status()
             raw = json.dumps(payload, ensure_ascii=False)
             sig = (
                 payload.get("running"),
@@ -853,7 +1015,10 @@ def events():
                 payload.get("error"),
                 payload.get("report_path"),
                 payload.get("cancel_requested"),
+                payload.get("run_reason"),
+                payload.get("keepalive_required"),
                 json.dumps(payload.get("prepared_source"), ensure_ascii=False, sort_keys=True),
+                json.dumps(payload.get("schedule"), ensure_ascii=False, sort_keys=True),
             )
             if sig != last_sig:
                 last_sig = sig
