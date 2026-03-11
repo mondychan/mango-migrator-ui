@@ -217,10 +217,17 @@ def _telegram_send_message(config: dict, text: str):
 
 def _notification_status_label(status: str) -> str:
     return {
-        "done": "DONE",
-        "error": "ERROR",
-        "cancelled": "CANCELLED",
+        "done": "DOKONCENO",
+        "error": "CHYBA",
+        "cancelled": "ZASTAVENO",
     }.get(status, status.upper())
+
+
+def _notification_run_reason_label(reason: str) -> str:
+    return {
+        "manual": "rucne",
+        "schedule": "automaticky",
+    }.get(reason, reason)
 
 
 def _finalize_report(report: dict, status: str, error_message: str | None = None) -> dict:
@@ -249,8 +256,8 @@ def _build_telegram_message(report: dict) -> str:
     finished = finished_at.astimezone().strftime("%Y-%m-%d %H:%M:%S") if finished_at else "-"
     source_summary = report.get("source_summary") or {}
     stats = [
-        ("Source active=1", source_summary.get("import_count", 0)),
-        ("Source active=0", source_summary.get("deactivate_count", 0)),
+        ("ISPAdmin aktivni", source_summary.get("import_count", 0)),
+        ("ISPAdmin deaktivovani", source_summary.get("deactivate_count", 0)),
         ("Deaktivovano", report.get("deactivated_count", 0)),
         ("Preskoceno deaktivace", report.get("deactivate_skipped_count", 0)),
         ("Chyby deaktivace", report.get("deactivate_errors_count", 0)),
@@ -263,22 +270,22 @@ def _build_telegram_message(report: dict) -> str:
         f"{html.escape(label.ljust(width))}  {value}" for label, value in stats
     )
     lines = [
-        "<b>ISPAdmin -&gt; Mango sync</b>",
+        "<b>Synchronizace ISPAdmin -&gt; Mango</b>",
         "",
-        f"<b>Status:</b> {html.escape(_notification_status_label(report.get('status', 'done')))}",
-        f"<b>Run type:</b> {html.escape(str(report.get('run_reason', 'manual')))}",
-        f"<b>Started:</b> <code>{html.escape(started)}</code>",
-        f"<b>Finished:</b> <code>{html.escape(finished)}</code>",
-        f"<b>Duration:</b> <code>{html.escape(_format_duration(report.get('duration_seconds')))}</code>",
+        f"<b>Stav:</b> {html.escape(_notification_status_label(report.get('status', 'done')))}",
+        f"<b>Typ behu:</b> {html.escape(_notification_run_reason_label(str(report.get('run_reason', 'manual'))))}",
+        f"<b>Zacatek:</b> <code>{html.escape(started)}</code>",
+        f"<b>Konec:</b> <code>{html.escape(finished)}</code>",
+        f"<b>Delka:</b> <code>{html.escape(_format_duration(report.get('duration_seconds')))}</code>",
         "",
-        "<b>Stats</b>",
+        "<b>Statistiky</b>",
         f"<pre>{stats_block}</pre>",
     ]
     if report.get("error"):
         lines.extend(
             [
                 "",
-                f"<b>Error:</b> <code>{html.escape(str(report['error']))}</code>",
+                f"<b>Chyba:</b> <code>{html.escape(str(report['error']))}</code>",
             ]
         )
     return "\n".join(lines)

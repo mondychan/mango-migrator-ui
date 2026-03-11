@@ -211,6 +211,31 @@ function formatDateTime(value) {
   return isNaN(d.getTime()) ? '-' : d.toLocaleString('cs-CZ');
 }
 
+function stageLabel(stage) {
+  const map = {
+    idle: 'Pripraveno',
+    starting: 'Spousteni synchronizace',
+    source_prepare: 'Nacitani dat z ISPAdminu',
+    source_load: 'Priprava lokalniho porovnani',
+    login: 'Prihlaseni do Mango',
+    export_active: 'Nacitani aktivnich uzivatelu z Mango',
+    deactivation: 'Deaktivace klientu v Mango',
+    import: 'Zakladani novych klientu v Mango',
+    done: 'Dokonceno',
+    cancelled: 'Zastaveno',
+    error: 'Chyba',
+  };
+  return map[stage] || stage || 'Pripraveno';
+}
+
+function runReasonLabel(reason) {
+  const map = {
+    manual: 'rucne',
+    schedule: 'automaticky',
+  };
+  return map[reason] || reason || '';
+}
+
 async function loadReports() {
   const r = await fetch('/api/reports');
   const j = await r.json();
@@ -342,9 +367,9 @@ function render(s) {
   s = sanitizeHydratedStatus(s);
   const running = !!s.running;
   const cancelReq = !!s.cancel_requested;
-  const runReason = s.run_reason ? ` • ${s.run_reason}` : '';
+  const runReason = s.run_reason ? ` • ${runReasonLabel(s.run_reason)}` : '';
 
-  $('stage').textContent = `${s.stage || 'idle'} (${s.percent || 0}%)${runReason}` + (cancelReq ? ' • stopping...' : '');
+  $('stage').textContent = `${stageLabel(s.stage)} (${s.percent || 0}%)${runReason}` + (cancelReq ? ' • zastavuji...' : '');
   $('progBar').style.width = `${s.percent || 0}%`;
   $('progWrap').classList.toggle('running', running && !cancelReq);
   $('progWrap').classList.toggle('stopping', cancelReq);
