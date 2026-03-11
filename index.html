@@ -283,8 +283,8 @@ function summaryHtml(s) {
   return `
     <div class="chip"><b>Zdroj</b><br>ISPAdmin API</div>
     <div class="chip"><b>Deaktivovano</b><br>${x.deactivated_count ?? 0}</div>
-    <div class="chip"><b>Preskoceno (deact)</b><br>${x.deactivate_skipped_count ?? 0}</div>
-    <div class="chip"><b>Chyby (deact)</b><br>${x.deactivate_errors_count ?? 0}</div>
+    <div class="chip"><b>Preskoceno (deaktivace)</b><br>${x.deactivate_skipped_count ?? 0}</div>
+    <div class="chip"><b>Chyby (deaktivace)</b><br>${x.deactivate_errors_count ?? 0}</div>
     <div class="chip"><b>Vytvoreno</b><br>${x.created_count ?? 0}</div>
     <div class="chip"><b>Preskoceno (import)</b><br>${x.import_skipped_count ?? 0}</div>
     <div class="chip"><b>Chyby (import)</b><br>${x.import_errors_count ?? 0}</div>`;

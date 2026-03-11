@@ -721,7 +721,7 @@ def _run_job(source_spec: dict, run_reason: str):
                 done += 1
                 if index == 1 or index % 25 == 0:
                     _append_log(
-                        "deact "
+                        "deaktivace "
                         f"{index}/{len(deact_rows)} | deactivated={len(report['deactivated'])} "
                         f"skipped={len(report['deactivate_skipped'])} errors={len(report['deactivate_errors'])}"
                     )
@@ -851,8 +851,8 @@ def _run_job(source_spec: dict, run_reason: str):
         _append_log(
             "Summary: "
             f"deactivated={report['deactivated_count']} "
-            f"deact_skipped={report['deactivate_skipped_count']} "
-            f"deact_errors={report['deactivate_errors_count']} "
+            f"deactivate_skipped={report['deactivate_skipped_count']} "
+            f"deactivate_errors={report['deactivate_errors_count']} "
             f"created={report['created_count']} "
             f"import_skipped={report['import_skipped_count']} "
             f"import_errors={report['import_errors_count']}"
