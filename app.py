@@ -583,6 +583,14 @@ def _run_job(source_spec: dict):
     verify = True
 
     try:
+        if source_spec.get("mode") == "api":
+            _set_progress("source_prepare", 1)
+            _append_log("Loading client snapshots from ISPAdmin API...")
+            source_spec = _prepare_api_source()
+            with STATE.lock:
+                STATE.current["source_mode"] = source_spec.get("mode")
+                STATE.current["source_label"] = source_spec.get("label")
+
         _set_progress("source_load", 1)
         _append_log(f"Preparing source rows ({source_spec.get('label')})")
         deact_rows, import_rows = _load_source_rows(source_spec)
@@ -907,13 +915,22 @@ def start_job(payload: dict | None = Body(default=None)):
     if STATE.running:
         raise HTTPException(status_code=409, detail="Run already in progress")
 
-    spec = _load_prepared_source()
-    if not spec:
-        raise HTTPException(status_code=400, detail="Prepare a CSV or ISPAdmin API source first")
-
     requested_mode = (payload or {}).get("source_mode")
-    if requested_mode and requested_mode != spec.get("mode"):
-        raise HTTPException(status_code=400, detail="Prepared source mode does not match selected mode")
+    if requested_mode == "api":
+        spec = {
+            "mode": "api",
+            "label": "ISPAdmin API",
+            "prepared_at": datetime.now(UTC).isoformat(),
+            "deactivate_path": None,
+            "import_path": None,
+            "summary": {},
+        }
+    else:
+        spec = _load_prepared_source()
+        if not spec:
+            raise HTTPException(status_code=400, detail="Prepare a CSV or ISPAdmin API source first")
+        if requested_mode and requested_mode != spec.get("mode"):
+            raise HTTPException(status_code=400, detail="Prepared source mode does not match selected mode")
 
     _append_log(f"Job starting from {spec.get('label')}...")
     thread = threading.Thread(target=_run_job, args=(spec,), daemon=True)

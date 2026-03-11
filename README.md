@@ -56,20 +56,17 @@ UI poběží na `http://localhost:8099`.
 
 ## UI workflow
 
-### CSV režim
+Aktuální frontend je zjednodušený na one-button API sync:
 
-1. vyber `CSV export`
-2. nahraj `deaktivovani-klienti.csv`
-3. nahraj `kontakty.csv`
-4. klikni na `Nahrát a validovat CSV`
-5. spusť job
+1. nastav `ISPADMIN_API_BASE_URL` a `ISPADMIN_API_TOKEN` v `cibs.env`
+2. klikni na `Start`
+3. aplikace sama:
+   - načte deaktivované klienty z ISPAdmin API
+   - načte aktivní klienty z ISPAdmin API
+   - porovná je s Mango
+   - zapíše jen změny
 
-### ISPAdmin API režim
-
-1. vyber `ISPAdmin API`
-2. nastav `ISPADMIN_API_BASE_URL` a `ISPADMIN_API_TOKEN` v `cibs.env`
-3. klikni na `Připravit API snapshot`
-4. spusť job
+CSV podpora je zatím v backendu ponechaná jako fallback, ale frontend ji už nepoužívá.
 
 ## Backend endpointy
 

@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
@@ -21,18 +21,10 @@
     .badge{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;background:rgba(160,183,242,.1)}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
     .card h3{margin:0 0 10px}
-    .steps{margin:0;padding-left:20px;display:grid;gap:8px}
     code{font-family:"IBM Plex Mono",monospace;color:#dff4ff;background:rgba(12,18,40,.78);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
-    .warn,.info,.ok{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px}
-    .warn{background:rgba(206,255,45,.14);color:#f1ffd0;border-color:rgba(206,255,45,.45)}
-    .info{background:rgba(0,207,255,.14);color:#caf4ff;border-color:rgba(0,207,255,.5)}
-    .ok{background:rgba(103,231,150,.14);color:#c9ffe0;border-color:rgba(103,231,150,.5)}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .row.spread{justify-content:space-between}
-    .filebox,.panel{flex:1;min-width:260px;border:1px dashed rgba(166,186,230,.45);border-radius:10px;padding:10px;background:rgba(12,18,40,.55)}
-    label{display:block;font-size:13px;color:#f0f4ff;margin-bottom:6px}
-    input[type=file],select{width:100%;color:#edf2ff}
-    select,input[type=text]{padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(12,18,40,.8);color:#fff}
+    .muted{font-size:13px;color:#eef3ff}
     button{border:1px solid transparent;border-radius:10px;padding:10px 14px;background:var(--gradient);color:var(--btn-ink);font-weight:700;cursor:pointer}
     button.secondary{background:rgba(160,183,242,.15);border-color:rgba(160,183,242,.4);color:#dfe8ff}
     button.danger{background:linear-gradient(120deg,#ff9f9f,#ff7a7a);color:#421515}
@@ -48,10 +40,6 @@
     @keyframes move{from{background-position:0 0}to{background-position:200% 0}}
     .summary{margin-top:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
     .chip{background:rgba(12,18,40,.75);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px}
-    .muted{font-size:13px;color:#eef3ff}
-    .mode-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-    .mode-option{border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(12,18,40,.55)}
-    .mode-option.active{border-color:rgba(0,207,255,.6);box-shadow:inset 0 0 0 1px rgba(0,207,255,.35)}
     pre{margin:0;max-height:360px;overflow:auto;background:#070b17;border:1px solid #25345f;border-radius:10px;padding:12px;color:#b9f7d4;font-size:12px;font-family:"IBM Plex Mono",monospace;white-space:pre-wrap;word-break:break-word}
     .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:999}
     .modal-backdrop.collapsed{display:none!important}
@@ -70,68 +58,15 @@
           <div>
             <p class="hero-kicker">fortenet tools</p>
             <h1>Mango Migrator UI</h1>
-            <p class="subtitle">Import klientů z ISPAdminu do Mango přes CSV nebo ISPAdmin API.</p>
+            <p class="subtitle">Jednim kliknutim nacte ISPAdmin API a synchronizuje deaktivovane i nove klienty do Mango.</p>
           </div>
         </div>
-        <div class="badge" id="lastRunInfo">Last run: —</div>
+        <div class="badge" id="lastRunInfo">Last run: -</div>
       </div>
     </header>
 
-    <div class="card">
-      <h3>Postup</h3>
-      <ol class="steps">
-        <li>Vyber zdroj dat: původní <code>CSV</code> nebo nový <code>ISPAdmin API</code>.</li>
-        <li>Zdroj nejdřív připrav: u CSV nahraj oba soubory, u API vytvoř snapshot aktivních i deaktivovaných klientů.</li>
-        <li>Spusť job. Sync nejdřív deaktivuje klienty z <code>active=0</code>, potom doplní klienty z <code>active=1</code>, kteří v Mango ještě nejsou.</li>
-      </ol>
-      <div class="info">Aplikace vždy importuje do Mango postupně, aby zbytečně nepřetěžovala API. Připravený zdroj se po doběhu smaže.</div>
-    </div>
-
-    <div class="card" id="sourceCard">
-      <h3>1) Zdroj dat</h3>
-      <div class="row">
-        <div style="flex:1;min-width:240px">
-          <label for="sourceMode">Vyber režim</label>
-          <select id="sourceMode">
-            <option value="csv">CSV export</option>
-            <option value="api">ISPAdmin API</option>
-          </select>
-        </div>
-        <div class="panel" style="min-width:320px">
-          <div class="muted" id="preparedSummary">Zatím není připraven žádný zdroj.</div>
-        </div>
-      </div>
-
-      <div class="mode-grid" style="margin-top:12px">
-        <div class="mode-option" id="csvOption">
-          <h4 style="margin:0 0 8px">CSV režim</h4>
-          <p class="muted" style="margin:0 0 10px">Použije stávající workflow se soubory <code>deaktivovani-klienti.csv</code> a <code>kontakty.csv</code>.</p>
-          <div class="row">
-            <div class="filebox"><label>deaktivovani-klienti.csv</label><input type="file" id="f1" accept=".csv" /></div>
-            <div class="filebox"><label>kontakty.csv</label><input type="file" id="f2" accept=".csv" /></div>
-          </div>
-          <div class="row" style="margin-top:10px">
-            <button id="uploadBtn">Nahrát a validovat CSV</button>
-            <span class="muted">CSV režim zachovává i deaktivace.</span>
-          </div>
-          <div id="uploadMsg" class="muted" style="margin-top:10px"></div>
-        </div>
-
-        <div class="mode-option collapsed" id="apiOption">
-          <h4 style="margin:0 0 8px">ISPAdmin API režim</h4>
-          <p class="muted" style="margin:0 0 10px">Backend načte aktivní i deaktivované klienty z ISPAdmin REST API pomocí tokenu a URL nastavených v <code>cibs.env</code>.</p>
-          <div class="info"><b>API sync:</b> nejdřív porovná Mango s klienty <code>active=0</code> a provede deaktivace, potom z klientů <code>active=1</code> doplní jen chybějící záznamy.</div>
-          <div class="row" style="margin-top:10px">
-            <button id="prepareApiBtn">Připravit API snapshot</button>
-            <span class="muted">Vytvoří lokální snapshot aktivních i deaktivovaných klientů pro aktuální běh.</span>
-          </div>
-          <div id="apiMsg" class="muted" style="margin-top:10px"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card collapsed" id="step2Card">
-      <h3>2) Spustit job</h3>
+    <div class="card" id="step2Card">
+      <h3>Spustit job</h3>
       <div class="row spread">
         <div class="row">
           <button id="runBtn">Start</button>
@@ -144,26 +79,26 @@
     </div>
 
     <div class="card collapsed" id="logCard">
-      <h3>3) Průběh a log</h3>
+      <h3>Prubeh a log</h3>
       <pre id="log"></pre>
     </div>
 
     <div class="card" id="reportsCard">
       <div class="row spread" style="margin-top:2px">
-        <h3 style="margin:0">Historie reportů</h3>
+        <h3 style="margin:0">Historie reportu</h3>
         <div class="row">
           <button class="secondary" id="refreshReportsBtn">Obnovit</button>
-          <button class="secondary" id="displayCurrentReportBtn">Zobrazit poslední</button>
+          <button class="secondary" id="displayCurrentReportBtn">Zobrazit posledni</button>
         </div>
       </div>
       <div class="row" style="align-items:flex-start;margin-top:8px">
         <div style="flex:1;min-width:320px">
-          <label>Uložené reporty</label>
+          <label>Ulozene reporty</label>
           <div id="reportsList" style="display:grid;gap:8px"></div>
         </div>
         <div style="flex:2;min-width:320px">
-          <label>Náhled reportu</label>
-          <pre id="reportViewer">Klikni na report vlevo (View) pro zobrazení.</pre>
+          <label>Nahled reportu</label>
+          <pre id="reportViewer">Klikni na report vlevo (View) pro zobrazeni.</pre>
         </div>
       </div>
     </div>
@@ -171,11 +106,11 @@
 
   <div id="stopModal" class="modal-backdrop collapsed">
     <div class="modal">
-      <h4>Opravdu chceš operaci zastavit?</h4>
-      <p class="muted">Pro potvrzení napiš do pole přesně <code>STOP</code>.</p>
-      <input id="stopConfirmInput" placeholder="Napiš STOP" />
+      <h4>Opravdu chces operaci zastavit?</h4>
+      <p class="muted">Pro potvrzeni napis do pole presne <code>STOP</code>.</p>
+      <input id="stopConfirmInput" placeholder="Napis STOP" />
       <div class="row" style="margin-top:10px;justify-content:flex-end">
-        <button class="secondary" id="stopCancelBtn">Zrušit</button>
+        <button class="secondary" id="stopCancelBtn">Zrusit</button>
         <button id="stopConfirmBtn" disabled>Potvrdit STOP</button>
       </div>
     </div>
@@ -184,30 +119,13 @@
 <script>
 const $ = (id) => document.getElementById(id);
 let keepaliveTimer = null;
-let lastCompletedRunText = 'Last run: —';
-let selectedMode = 'csv';
-let preparedSource = null;
+let lastCompletedRunText = 'Last run: -';
 let suppressCompletedHydration = true;
-
-function statusMsg(el, text, type = 'info') {
-  el.className = type === 'ok' ? 'ok' : (type === 'warn' ? 'warn' : 'info');
-  el.textContent = text;
-}
 
 function reportNameFromPath(path) {
   if (!path) return '';
   const parts = String(path).split('/');
   return parts[parts.length - 1] || '';
-}
-
-function fmtTs(ts) {
-  if (!ts) return '—';
-  const d = new Date(ts);
-  return isNaN(d.getTime()) ? ts : d.toLocaleString('cs-CZ', { hour12: false });
-}
-
-function sourceReadyForSelectedMode() {
-  return !!preparedSource && preparedSource.mode === selectedMode;
 }
 
 function sanitizeHydratedStatus(s) {
@@ -230,29 +148,6 @@ function sanitizeHydratedStatus(s) {
   };
 }
 
-function updateSourceUi() {
-  $('csvOption').classList.toggle('collapsed', selectedMode !== 'csv');
-  $('apiOption').classList.toggle('collapsed', selectedMode !== 'api');
-  $('csvOption').classList.toggle('active', selectedMode === 'csv');
-  $('apiOption').classList.toggle('active', selectedMode === 'api');
-  $('step2Card').classList.toggle('collapsed', !sourceReadyForSelectedMode() && !$('runBtn').dataset.running);
-
-  if (!preparedSource) {
-    $('preparedSummary').textContent = 'Zatím není připraven žádný zdroj.';
-    return;
-  }
-
-  const summary = preparedSource.summary || {};
-  const suffix = `Připraveno ${fmtTs(preparedSource.prepared_at)} | import: ${summary.import_count ?? 0} | deaktivace: ${summary.deactivate_count ?? 0}`;
-  $('preparedSummary').textContent = `${preparedSource.label}: ${suffix}`;
-}
-
-function applyPreparedSource(source) {
-  preparedSource = source || null;
-  if (preparedSource) suppressCompletedHydration = false;
-  updateSourceUi();
-}
-
 async function loadReports() {
   const r = await fetch('/api/reports');
   const j = await r.json();
@@ -260,7 +155,7 @@ async function loadReports() {
   const box = $('reportsList');
   box.innerHTML = '';
   if (!list.length) {
-    box.innerHTML = '<div class="muted">Zatím žádné reporty.</div>';
+    box.innerHTML = '<div class="muted">Zatim zadne reporty.</div>';
     return;
   }
 
@@ -318,58 +213,15 @@ function stopKeepalive() {
   keepaliveTimer = null;
 }
 
-async function prepareCsvSource() {
-  const f1 = $('f1').files[0];
-  const f2 = $('f2').files[0];
-  if (!f1 || !f2) return statusMsg($('uploadMsg'), 'Vyber oba CSV soubory.', 'warn');
-  const fd = new FormData();
-  fd.append('deactivate_csv', f1);
-  fd.append('import_csv', f2);
-  try {
-    const r = await fetch('/api/upload', { method: 'POST', body: fd });
-    const j = await r.json();
-    if (!r.ok) {
-      applyPreparedSource(null);
-      statusMsg($('uploadMsg'), 'Chyba uploadu: ' + (j.detail || JSON.stringify(j)), 'warn');
-      return;
-    }
-    applyPreparedSource(j.source || null);
-    statusMsg($('uploadMsg'), 'CSV zdroj je připravený. Můžeš spustit job.', 'ok');
-  } catch (e) {
-    applyPreparedSource(null);
-    statusMsg($('uploadMsg'), 'Chyba spojení: ' + e.message, 'warn');
-  }
-}
-
-async function prepareApiSource() {
-  try {
-    const r = await fetch('/api/prepare-api-source', { method: 'POST' });
-    const j = await r.json();
-    if (!r.ok) {
-      applyPreparedSource(null);
-      statusMsg($('apiMsg'), 'Chyba přípravy API: ' + (j.detail || JSON.stringify(j)), 'warn');
-      return;
-    }
-    applyPreparedSource(j.source || null);
-    statusMsg($('apiMsg'), 'ISPAdmin API snapshot je připravený. Můžeš spustit job.', 'ok');
-  } catch (e) {
-    applyPreparedSource(null);
-    statusMsg($('apiMsg'), 'Chyba spojení: ' + e.message, 'warn');
-  }
-}
-
 async function startJob() {
-  if (!sourceReadyForSelectedMode()) {
-    alert(selectedMode === 'csv' ? 'Nejdřív nahraj a validuj oba CSV soubory.' : 'Nejdřív připrav ISPAdmin API snapshot.');
-    return;
-  }
   const r = await fetch('/api/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ source_mode: selectedMode }),
+    body: JSON.stringify({ source_mode: 'api' }),
   });
   const j = await r.json();
   if (!r.ok) return alert(j.detail || 'Start failed');
+  suppressCompletedHydration = false;
   $('logCard').classList.remove('collapsed');
 }
 
@@ -382,14 +234,13 @@ async function stopJob() {
 function summaryHtml(s) {
   if (!s.summary) return '';
   const x = s.summary;
-  const sourceText = x.source_mode === 'api' ? 'ISPAdmin API' : (x.source_mode === 'csv' ? 'CSV' : '—');
   return `
-    <div class="chip"><b>Zdroj</b><br>${sourceText}</div>
-    <div class="chip"><b>Deaktivováno</b><br>${x.deactivated_count ?? 0}</div>
-    <div class="chip"><b>Přeskočeno (deact)</b><br>${x.deactivate_skipped_count ?? 0}</div>
+    <div class="chip"><b>Zdroj</b><br>ISPAdmin API</div>
+    <div class="chip"><b>Deaktivovano</b><br>${x.deactivated_count ?? 0}</div>
+    <div class="chip"><b>Preskoceno (deact)</b><br>${x.deactivate_skipped_count ?? 0}</div>
     <div class="chip"><b>Chyby (deact)</b><br>${x.deactivate_errors_count ?? 0}</div>
-    <div class="chip"><b>Vytvořeno</b><br>${x.created_count ?? 0}</div>
-    <div class="chip"><b>Přeskočeno (import)</b><br>${x.import_skipped_count ?? 0}</div>
+    <div class="chip"><b>Vytvoreno</b><br>${x.created_count ?? 0}</div>
+    <div class="chip"><b>Preskoceno (import)</b><br>${x.import_skipped_count ?? 0}</div>
     <div class="chip"><b>Chyby (import)</b><br>${x.import_errors_count ?? 0}</div>`;
 }
 
@@ -397,7 +248,6 @@ function render(s) {
   s = sanitizeHydratedStatus(s);
   const running = !!s.running;
   const cancelReq = !!s.cancel_requested;
-  if (!running) applyPreparedSource(s.prepared_source || preparedSource);
 
   $('stage').textContent = `${s.stage || 'idle'} (${s.percent || 0}%)` + (cancelReq ? ' • stopping...' : '');
   $('progBar').style.width = `${s.percent || 0}%`;
@@ -405,32 +255,20 @@ function render(s) {
   $('progWrap').classList.toggle('stopping', cancelReq);
   $('dot').className = 'dot ' + (running ? 'run' : '');
   $('log').textContent = (s.log || []).join('\n');
-  if ((s.log || []).length) $('logCard').classList.remove('collapsed');
+  $('logCard').classList.toggle('collapsed', !(running || (s.log || []).length || s.summary || s.report_path || s.error));
   $('lastRunInfo').textContent = running ? `${lastCompletedRunText} • running` : lastCompletedRunText;
   window.__lastReportPath = s.report_path || '';
   $('report').innerHTML = s.report_path ? `Report: <code>${s.report_path}</code>` : '';
   $('summary').innerHTML = summaryHtml(s);
   if (s.report_path) loadReports().catch(() => {});
-  if (running || s.error || s.summary || s.report_path || sourceReadyForSelectedMode()) $('step2Card').classList.remove('collapsed');
 
   if (running) startKeepalive(); else stopKeepalive();
 
-  $('sourceMode').disabled = running;
-  $('uploadBtn').disabled = running;
-  $('prepareApiBtn').disabled = running;
   $('runBtn').dataset.running = running ? '1' : '';
   $('runBtn').textContent = cancelReq ? 'Stopping...' : (running ? 'Stop' : 'Start');
   $('runBtn').classList.toggle('danger', running);
   $('runBtn').disabled = cancelReq;
 }
-
-$('sourceMode').onchange = (e) => {
-  selectedMode = e.target.value;
-  updateSourceUi();
-};
-
-$('uploadBtn').onclick = () => prepareCsvSource();
-$('prepareApiBtn').onclick = () => prepareApiSource();
 
 $('runBtn').onclick = async () => {
   const running = $('runBtn').dataset.running === '1';
@@ -452,7 +290,7 @@ $('stopConfirmBtn').onclick = async () => {
 $('refreshReportsBtn').onclick = () => loadReports();
 $('displayCurrentReportBtn').onclick = async () => {
   const name = reportNameFromPath(window.__lastReportPath || '');
-  if (!name) return alert('Aktuální report není k dispozici.');
+  if (!name) return alert('Aktualni report neni k dispozici.');
   await showReport(name);
 };
 
@@ -465,11 +303,7 @@ fetch('/api/status')
   .then((r) => r.json())
   .then((s) => {
     const hydrated = sanitizeHydratedStatus(s);
-    selectedMode = hydrated.prepared_source?.mode || selectedMode;
-    $('sourceMode').value = selectedMode;
-    applyPreparedSource(hydrated.prepared_source || null);
     if ((hydrated.log || []).length || hydrated.running || hydrated.summary || hydrated.report_path) {
-      $('step2Card').classList.remove('collapsed');
       $('logCard').classList.remove('collapsed');
     }
     render(hydrated);
