@@ -47,6 +47,7 @@ Aplikace cte runtime konfiguraci z `cibs.env`.
 - `CIBS_PASSWORD`
 
 `CIBS_CT` je povinny a musi byt vyplneny v `cibs.env`.
+Hodnotu `CIBS_CT` vam sdeli podpora MangoISP.
 
 ### ISPAdmin REST API
 
